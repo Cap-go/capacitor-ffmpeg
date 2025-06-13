@@ -1,0 +1,6 @@
+[submodule "rust/ffmpeg"]
+	path = rust/ffmpeg
+	url = https://git.ffmpeg.org/ffmpeg.git
+[submodule "rust/ffmpeg-sys"]
+	path = rust/ffmpeg-sys
+	url = https://github.com/zmwangx/rust-ffmpeg-sys.git

@@ -1,0 +1,20 @@
+[package]
+name = "capacitor_ffmpeg_rust"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ffmpeg-next = "7.1.0"
+
+[lib]
+name = "capacitor_ffmpeg_rust"
+crate-type = ["staticlib"]
+
+[profile.release]
+lto = true
+opt-level = "s"
+panic = "abort"
+
+# Use our local ffmpeg-sys submodule instead of crates.io version
+[patch.crates-io]
+ffmpeg-sys-next = { path = "ffmpeg-sys" } 

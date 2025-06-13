@@ -11,7 +11,12 @@ Pod::Spec.new do |s|
   s.author = package['author']
   s.source = { :git => package['repository']['url'], :tag => s.version.to_s }
   s.source_files = 'ios/Sources/**/*.{swift,h,m,c,cc,mm,cpp}'
+  s.preserve_paths = 'rust/target/**/*'
+  s.vendored_libraries = 'rust/target/universal/release/libcapacitor_ffmpeg_rust_device.a'
   s.ios.deployment_target = '14.0'
   s.dependency 'Capacitor'
   s.swift_version = '5.1'
+  s.pod_target_xcconfig = {
+    'OTHER_LDFLAGS' => '-lc++'
+  }
 end
