@@ -2,5 +2,8 @@
 include ':capacitor-android'
 project(':capacitor-android').projectDir = new File('../node_modules/@capacitor/android/capacitor')
 
+include ':capgo-camera-preview'
+project(':capgo-camera-preview').projectDir = new File('../node_modules/@capgo/camera-preview/android')
+
 include ':capgo-capacitor-ffmpeg'
 project(':capgo-capacitor-ffmpeg').projectDir = new File('../../android')

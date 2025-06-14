@@ -13,10 +13,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@capacitor/android": "7.0.0",
     "@capacitor/core": "latest",
-    "@capgo/capacitor-ffmpeg": "file:..",
     "@capacitor/ios": "7.0.0",
-    "@capacitor/android": "7.0.0"
+    "@capgo/camera-preview": "^7.3.7",
+    "@capgo/capacitor-ffmpeg": "file:.."
   },
   "devDependencies": {
     "@capacitor/cli": "latest",

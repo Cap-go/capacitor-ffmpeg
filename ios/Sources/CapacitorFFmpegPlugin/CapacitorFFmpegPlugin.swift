@@ -5,37 +5,72 @@ import Capacitor
  * Please read the Capacitor iOS Plugin Development Guide
  * here: https://capacitorjs.com/docs/plugins/ios
  */
+@available(iOS 26.0, *)
 @objc(CapacitorFFmpegPlugin)
 public class CapacitorFFmpegPlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "CapacitorFFmpegPlugin"
     public let jsName = "CapacitorFFmpeg"
     public let pluginMethods: [CAPPluginMethod] = [
-        CAPPluginMethod(name: "echo", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "addTwoNumbers", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "initializeFFmpeg", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "reencodeVideo", returnType: CAPPluginReturnPromise)
     ]
+    
     private let implementation = CapacitorFFmpeg()
+    
+    override public func load() {
+        super.load()
+        
+        // Set up progress callback
+        implementation.onProgress = { [weak self] progress, fileId in
+            DispatchQueue.main.async {
+                self?.notifyListeners("progress", data: [
+                    "progress": progress,
+                    "fileId": fileId
+                ])
+            }
+        }
+    }
 
-    @objc func echo(_ call: CAPPluginCall) {
-        let value = call.getString("value") ?? ""
-        call.resolve([
-            "value": implementation.echo(value)
-        ])
-    }
-    
-    @objc func addTwoNumbers(_ call: CAPPluginCall) {
-        let a = call.getInt("a") ?? 0
-        let b = call.getInt("b") ?? 0
-        let result = implementation.addTwoNumbers(Int32(a), Int32(b))
-        call.resolve([
-            "result": Int(result)
-        ])
-    }
-    
-    @objc func initializeFFmpeg(_ call: CAPPluginCall) {
-        let result = implementation.initializeFFmpeg()
-        call.resolve([
-            "result": Int(result)
-        ])
+    @objc func reencodeVideo(_ call: CAPPluginCall) {
+        guard let inputPath = call.getString("inputPath") else {
+            call.reject("Input path is required")
+            return
+        }
+        guard let outputPath = call.getString("outputPath") else {
+            call.reject("Output path is required")
+            return
+        }
+        guard let height = call.getInt("height") else {
+            call.reject("Height is required")
+            return
+        }
+        guard let width = call.getInt("width") else {
+            call.reject("Width is required")
+            return
+        }
+        let bitrate = call.getInt("bitrate", 0) // 0 means default, which is 1 MB/s
+        
+        do {
+            guard height > 0 && height <= Int32.max else {
+                call.reject("Height must be between 0 and \(Int32.max)")
+                return
+            }
+            guard width > 0 && width <= Int32.max else {
+                call.reject("Width must be between 0 and \(Int32.max)")
+                return
+            }
+            guard (bitrate >= 0) else {
+                call.reject("Negative bitrate is illegal!")
+                return
+            }
+            let height32 = Int32(height)
+            let width32 = Int32(width)
+            let bitrate32 = Int32(bitrate)
+            try self.implementation.reencodeVideo(inputPath: inputPath, outputPath: outputPath, width: width32, height: height32, bitrate: bitrate32)
+            
+            // Success - resolve the promise
+            call.resolve()
+        } catch {
+            call.reject(error.localizedDescription)
+        }
     }
 }

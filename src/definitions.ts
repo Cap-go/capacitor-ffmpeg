@@ -1,3 +1,9 @@
 export interface CapacitorFFmpegPlugin {
-  echo(options: { value: string }): Promise<{ value: string }>;
+  reencodeVideo(options: {
+    inputPath: string;
+    outputPath: string;
+    width: number;
+    height: number;
+    bitrate?: number;
+  }): Promise<void>;
 }

@@ -5,13 +5,25 @@ edition = "2021"
 
 [dependencies]
 ffmpeg-next = "7.1.0"
+anyhow = "1.0.98"
+tokio = { version = "1", features = ["rt", "rt-multi-thread"] }
+
+[dependencies.ffmpeg-sys-next]
+version = "7.1.0"
+default-features = true
+features = ["static", "build", "avcodec", "avdevice", "avformat", "avfilter", "swresample", "swscale", "build-license-gpl"]
+
+[target.'cfg(target_os = "ios")'.dependencies.ffmpeg-sys-next]
+version = "7.1.0"
+default-features = true
+features = ["static", "build", "avcodec", "avdevice", "avformat", "avfilter", "swresample", "swscale", "build-lib-x264", "build-license-gpl"]
 
 [lib]
 name = "capacitor_ffmpeg_rust"
 crate-type = ["staticlib"]
 
 [profile.release]
-lto = true
+lto = false
 opt-level = "s"
 panic = "abort"
 

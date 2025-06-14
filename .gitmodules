@@ -1,6 +1,6 @@
-[submodule "rust/ffmpeg"]
-	path = rust/ffmpeg
-	url = https://git.ffmpeg.org/ffmpeg.git
 [submodule "rust/ffmpeg-sys"]
 	path = rust/ffmpeg-sys
 	url = https://github.com/zmwangx/rust-ffmpeg-sys.git
+[submodule "rust/rust/x264"]
+	path = rust/rust/x264
+	url = https://code.videolan.org/videolan/x264.git
