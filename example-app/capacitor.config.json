@@ -1,6 +1,6 @@
 {
   "appId": "app.capgo.ffmpeg",
-  "appName": "FFmpeg Example",
+  "appName": "Ffmpeg Example",
   "webDir": "dist",
   "plugins": {
     "SplashScreen": {
