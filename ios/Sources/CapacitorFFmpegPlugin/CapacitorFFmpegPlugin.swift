@@ -13,12 +13,12 @@ public class CapacitorFFmpegPlugin: CAPPlugin, CAPBridgedPlugin {
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "reencodeVideo", returnType: CAPPluginReturnPromise)
     ]
-    
+
     private let implementation = CapacitorFFmpeg()
-    
+
     override public func load() {
         super.load()
-        
+
         // Set up progress callback
         implementation.onProgress = { [weak self] progress, fileId in
             DispatchQueue.main.async {
@@ -48,7 +48,7 @@ public class CapacitorFFmpegPlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
         let bitrate = call.getInt("bitrate", 0) // 0 means default, which is 1 MB/s
-        
+
         do {
             guard height > 0 && height <= Int32.max else {
                 call.reject("Height must be between 0 and \(Int32.max)")
@@ -58,7 +58,7 @@ public class CapacitorFFmpegPlugin: CAPPlugin, CAPBridgedPlugin {
                 call.reject("Width must be between 0 and \(Int32.max)")
                 return
             }
-            guard (bitrate >= 0) else {
+            guard bitrate >= 0 else {
                 call.reject("Negative bitrate is illegal!")
                 return
             }
@@ -66,7 +66,7 @@ public class CapacitorFFmpegPlugin: CAPPlugin, CAPBridgedPlugin {
             let width32 = Int32(width)
             let bitrate32 = Int32(bitrate)
             try self.implementation.reencodeVideo(inputPath: inputPath, outputPath: outputPath, width: width32, height: height32, bitrate: bitrate32)
-            
+
             // Success - resolve the promise
             call.resolve()
         } catch {
