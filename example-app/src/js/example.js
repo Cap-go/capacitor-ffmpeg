@@ -335,10 +335,4 @@ document.addEventListener('deviceready', () => {
     }, false);
 });
 
-// Keep the original echo function for testing
-window.testEcho = () => {
-    const inputValue = document.getElementById("echoInput")?.value || "Hello from Camera App!";
-    CapacitorFFmpeg.echo({ value: inputValue });
-};
-
 console.log('Camera Preview App loaded successfully!');
