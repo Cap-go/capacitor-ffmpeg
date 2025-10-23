@@ -6,4 +6,8 @@ export class CapacitorFFmpegWeb extends WebPlugin implements CapacitorFFmpegPlug
   reencodeVideo(_options: { inputPath: string; outputPath: string; width: number; height: number }): Promise<void> {
     throw new Error('Method not implemented.');
   }
+
+  async getPluginVersion(): Promise<{ version: string }> {
+    return { version: 'web' };
+  }
 }

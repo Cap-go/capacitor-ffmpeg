@@ -8,10 +8,12 @@ import Capacitor
 @available(iOS 26.0, *)
 @objc(CapacitorFFmpegPlugin)
 public class CapacitorFFmpegPlugin: CAPPlugin, CAPBridgedPlugin {
+    private let PLUGIN_VERSION: String = ""
     public let identifier = "CapacitorFFmpegPlugin"
     public let jsName = "CapacitorFFmpeg"
     public let pluginMethods: [CAPPluginMethod] = [
-        CAPPluginMethod(name: "reencodeVideo", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "reencodeVideo", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getPluginVersion", returnType: CAPPluginReturnPromise)
     ]
 
     private let implementation = CapacitorFFmpeg()
@@ -73,4 +75,9 @@ public class CapacitorFFmpegPlugin: CAPPlugin, CAPBridgedPlugin {
             call.reject(error.localizedDescription)
         }
     }
+
+    @objc func getPluginVersion(_ call: CAPPluginCall) {
+        call.resolve(["version": self.PLUGIN_VERSION])
+    }
+
 }
