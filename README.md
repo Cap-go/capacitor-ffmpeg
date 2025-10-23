@@ -19,6 +19,7 @@ npx cap sync
 <docgen-index>
 
 * [`reencodeVideo(...)`](#reencodevideo)
+* [`getPluginVersion()`](#getpluginversion)
 
 </docgen-index>
 
@@ -34,6 +35,19 @@ reencodeVideo(options: { inputPath: string; outputPath: string; width: number; h
 | Param         | Type                                                                                                     |
 | ------------- | -------------------------------------------------------------------------------------------------------- |
 | **`options`** | <code>{ inputPath: string; outputPath: string; width: number; height: number; bitrate?: number; }</code> |
+
+--------------------
+
+
+### getPluginVersion()
+
+```typescript
+getPluginVersion() => Promise<{ version: string; }>
+```
+
+Get the native Capacitor plugin version
+
+**Returns:** <code>Promise&lt;{ version: string; }&gt;</code>
 
 --------------------
 
