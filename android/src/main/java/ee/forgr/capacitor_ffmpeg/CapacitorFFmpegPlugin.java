@@ -9,7 +9,7 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 @CapacitorPlugin(name = "CapacitorFFmpeg")
 public class CapacitorFFmpegPlugin extends Plugin {
 
-    private final String PLUGIN_VERSION = "0.0.3";
+    private final String PLUGIN_VERSION = "0.0.4";
 
     private CapacitorFFmpeg implementation = new CapacitorFFmpeg();
 

@@ -1,6 +1,6 @@
 {
   "name": "@capgo/capacitor-ffmpeg",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Exposes the FFmpeg API to Capacitor",
   "main": "dist/plugin.cjs.js",
   "module": "dist/esm/index.js",
