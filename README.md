@@ -7,6 +7,10 @@
 </div>
 Exposes the FFmpeg API to Capacitor
 
+## Documentation
+
+The most complete doc is available here: https://capgo.app/docs/plugins/ffmpeg/
+
 ## Install
 
 ```bash
