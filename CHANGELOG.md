@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.5](https://example.com///compare/0.0.4...0.0.5) (2025-10-27)
+
+
+### Bug Fixes
+
+* renovate capacitor dep ([e6ab934](https://example.com///commit/e6ab934bf93f8416b076368a68a9216f66e798e4))
+
 ## [0.0.4](https://example.com///compare/0.0.3...0.0.4) (2025-10-26)
 
 
