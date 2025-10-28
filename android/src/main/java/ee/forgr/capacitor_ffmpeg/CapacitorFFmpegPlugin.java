@@ -11,16 +11,6 @@ public class CapacitorFFmpegPlugin extends Plugin {
 
     private final String PLUGIN_VERSION = "0.0.5";
 
-    private CapacitorFFmpeg implementation = new CapacitorFFmpeg();
-
-    @PluginMethod
-    public void echo(PluginCall call) {
-        String value = call.getString("value");
-
-        JSObject ret = new JSObject();
-        ret.put("value", implementation.echo(value));
-        call.resolve(ret);
-    }
 
     @PluginMethod
     public void getPluginVersion(final PluginCall call) {
