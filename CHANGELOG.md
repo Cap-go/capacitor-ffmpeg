@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.6](https://example.com///compare/0.0.5...0.0.6) (2025-10-28)
+
+
+### Bug Fixes
+
+* CI/CD config ([1d8d0ff](https://example.com///commit/1d8d0ffd4b7785c0b1e1eeaf46dad7b82a5a192d))
+* update github action ([6bab284](https://example.com///commit/6bab28433c422780e7a87ccbfc6d6d036466cd2a))
+
 ## [0.0.5](https://example.com///compare/0.0.4...0.0.5) (2025-10-27)
 
 
