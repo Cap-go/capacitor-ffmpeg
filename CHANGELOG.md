@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.7](https://example.com///compare/0.0.6...0.0.7) (2025-10-29)
+
+
+### Bug Fixes
+
+* update AI model in build workflow ([cbb2844](https://example.com///commit/cbb2844d7076a859eb574d4ea3a2ab3d41e72d76))
+
 ## [0.0.6](https://example.com///compare/0.0.5...0.0.6) (2025-10-28)
 
 
