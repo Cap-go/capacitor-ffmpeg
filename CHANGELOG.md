@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.8](https://example.com///compare/0.0.7...0.0.8) (2025-10-30)
+
+
+### Bug Fixes
+
+* pluginVersion lint issue ([7966b27](https://example.com///commit/7966b27c936a6f465c4bb1a5200820b6a6eb1da8))
+
 ## [0.0.7](https://example.com///compare/0.0.6...0.0.7) (2025-10-29)
 
 
