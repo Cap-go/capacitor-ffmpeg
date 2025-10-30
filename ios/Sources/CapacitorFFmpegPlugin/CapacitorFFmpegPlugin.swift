@@ -8,7 +8,7 @@ import Capacitor
 @available(iOS 26.0, *)
 @objc(CapacitorFFmpegPlugin)
 public class CapacitorFFmpegPlugin: CAPPlugin, CAPBridgedPlugin {
-    private let PLUGIN_VERSION: String = "0.0.7"
+    private let pluginVersion: String = "0.0.7"
     public let identifier = "CapacitorFFmpegPlugin"
     public let jsName = "CapacitorFFmpeg"
     public let pluginMethods: [CAPPluginMethod] = [
@@ -77,7 +77,7 @@ public class CapacitorFFmpegPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     @objc func getPluginVersion(_ call: CAPPluginCall) {
-        call.resolve(["version": self.PLUGIN_VERSION])
+        call.resolve(["version": self.pluginVersion])
     }
 
 }
