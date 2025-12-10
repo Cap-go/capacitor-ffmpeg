@@ -13,7 +13,7 @@ Pod::Spec.new do |s|
   s.source_files = 'ios/Sources/**/*.{swift,h,m,c,cc,mm,cpp}'
   s.preserve_paths = 'rust/target/**/*'
   s.vendored_libraries = ['rust/target/universal/release/libcapacitor_ffmpeg_rust_device.a', 'rust/x264-build-ios/lib/libx264.a']
-  s.ios.deployment_target = '14.0'
+  s.ios.deployment_target = '15.0'
   s.dependency 'Capacitor'
   s.swift_version = '5.1'
   s.pod_target_xcconfig = {
