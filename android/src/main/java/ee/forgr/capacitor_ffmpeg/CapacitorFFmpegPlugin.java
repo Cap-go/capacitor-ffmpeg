@@ -11,7 +11,6 @@ public class CapacitorFFmpegPlugin extends Plugin {
 
     private final String pluginVersion = "0.0.8";
 
-
     @PluginMethod
     public void getPluginVersion(final PluginCall call) {
         try {
