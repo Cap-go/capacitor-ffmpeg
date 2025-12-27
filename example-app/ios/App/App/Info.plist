@@ -2,10 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>CAPACITOR_DEBUG</key>
+	<string>$(CAPACITOR_DEBUG)</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>Ffmpeg Example</string>
+        <string>Ffmpeg Example</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -44,20 +46,6 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
-	<true/>
-	<key>NSCameraUsageDescription</key>
-	<string>This app needs access to camera to show camera preview</string>
-	<key>BGTaskSchedulerPermittedIdentifiers</key>
-	<array>
-		<string>ee.forgr.capacitor-ffmpeg.example-app.ffmpeg-reencode</string>
-	</array>
-	<key>LSApplicationCategoryType</key>
-	<string></string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>This app needs access to microphone for camera functionality</string>
-	<key>UIFileSharingEnabled</key>
-	<true/>
-	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
 </dict>
 </plist>
