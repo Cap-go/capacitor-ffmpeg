@@ -1,13 +1,14 @@
 import Foundation
-import BackgroundTasks
 
+// swiftlint:disable identifier_name
 /// C-compatible result structure matching Rust's CResult
 /// Must match the exact layout of the Rust #[repr(C)] struct
 @frozen
 public struct CResult {
-    let ok: CBool  // C-compatible boolean (same as Rust bool)
-    let error_message: UnsafeMutablePointer<CChar>?  // Exact same field name as Rust
+    let ok: CBool
+    let error_message: UnsafeMutablePointer<CChar>?
 }
+// swiftlint:enable identifier_name
 
 extension CResult {
     /// Extract error message as Swift String if available
@@ -18,7 +19,7 @@ extension CResult {
 
     /// Convert to Swift Result type
     func toSwiftResult() -> Result<Void, FFmpegError> {
-        if ok != false {  // Using != false instead of == true for CBool safety
+        if ok != false {
             return .success(())
         } else {
             let errorMsg = errorString ?? "Unknown error"
@@ -42,6 +43,7 @@ func deinit_ffmpeg_plugin(_ plugin: UnsafeMutableRawPointer)
 @_silgen_name("free_c_result")
 func free_c_result(_ result: UnsafeMutablePointer<CResult>)
 
+// swiftlint:disable function_parameter_count
 /// Re-encode a video file to a lower resolution
 /// - Parameters:
 ///   - plugin: A valid pointer to the plugin instance
@@ -64,27 +66,146 @@ func reencode_video(
     _ swiftInternalDataStructurePointer: UnsafeMutableRawPointer?,
     _ informAboutProgress: @escaping @convention(c) (Double, UnsafeMutableRawPointer?) -> Int32
 ) -> UnsafeMutablePointer<CResult>
+// swiftlint:enable function_parameter_count
 
-// MARK: - Encoding State Management
-/// Holds the state for a single video re-encoding operation
-@available(iOS 26.0, *)
-private class SelfForReencodeVideo {
-    let task: BGContinuedProcessingTask
-    let onProgress: ((Double, String) -> Void)?
+struct FFmpegAcceptedJob {
+    let jobId: String
+    let status: String = "queued"
 
-    init(task: BGContinuedProcessingTask, onProgress: ((Double, String) -> Void)?) {
-        self.task = task
-        self.onProgress = onProgress
+    var asDictionary: [String: Any] {
+        [
+            "jobId": jobId,
+            "status": status
+        ]
     }
 }
 
-@available(iOS 26.0, *)
-@objc public class CapacitorFFmpeg: NSObject {
+struct FFmpegCapabilityPayload {
+    let status: String
+    let reason: String?
 
+    var asDictionary: [String: Any] {
+        var payload: [String: Any] = [
+            "status": status
+        ]
+
+        if let reason {
+            payload["reason"] = reason
+        }
+
+        return payload
+    }
+}
+
+struct FFmpegCapabilitiesPayload {
+    let platform: String
+    let features: [String: FFmpegCapabilityPayload]
+
+    var asDictionary: [String: Any] {
+        [
+            "platform": platform,
+            "features": features.mapValues(\.asDictionary)
+        ]
+    }
+
+    static var iosCurrent: Self {
+        FFmpegCapabilitiesPayload(
+            platform: "ios",
+            features: [
+                "getPluginVersion": FFmpegCapabilityPayload(status: "available", reason: nil),
+                "getCapabilities": FFmpegCapabilityPayload(status: "available", reason: nil),
+                "reencodeVideo": FFmpegCapabilityPayload(
+                    status: "experimental",
+                    reason: "Rust-backed H.264 video re-encode with copied non-video streams."
+                ),
+                "progressEvents": FFmpegCapabilityPayload(
+                    status: "available",
+                    reason: "Progress events are emitted for accepted reencode jobs."
+                ),
+                "probeMedia": FFmpegCapabilityPayload(
+                    status: "unimplemented",
+                    reason: "probeMedia is planned but not implemented on iOS yet."
+                ),
+                "generateThumbnail": FFmpegCapabilityPayload(
+                    status: "unimplemented",
+                    reason: "generateThumbnail is planned but not implemented on iOS yet."
+                ),
+                "extractAudio": FFmpegCapabilityPayload(
+                    status: "unimplemented",
+                    reason: "extractAudio is planned but not implemented on iOS yet."
+                ),
+                "remux": FFmpegCapabilityPayload(
+                    status: "unimplemented",
+                    reason: "remux is planned but not implemented on iOS yet."
+                ),
+                "trim": FFmpegCapabilityPayload(
+                    status: "unimplemented",
+                    reason: "trim is planned but not implemented on iOS yet."
+                )
+            ]
+        )
+    }
+}
+
+struct FFmpegProgressPayload {
+    let jobId: String
+    let progress: Double
+    let state: String
+    let message: String?
+    let outputPath: String?
+
+    var asDictionary: [String: Any] {
+        var payload: [String: Any] = [
+            "jobId": jobId,
+            "progress": progress,
+            "state": state,
+            // Keep the legacy key while callers migrate to `jobId`.
+            "fileId": jobId
+        ]
+
+        if let message {
+            payload["message"] = message
+        }
+
+        if let outputPath {
+            payload["outputPath"] = outputPath
+        }
+
+        return payload
+    }
+}
+
+private final class SelfForReencodeVideo {
+    let jobId: String
+    let outputPath: String
+    let onProgress: ((FFmpegProgressPayload) -> Void)?
+
+    init(jobId: String, outputPath: String, onProgress: ((FFmpegProgressPayload) -> Void)?) {
+        self.jobId = jobId
+        self.outputPath = outputPath
+        self.onProgress = onProgress
+    }
+
+    func emit(progress: Double, state: String, message: String? = nil, outputPath: String? = nil) {
+        let payload = FFmpegProgressPayload(
+            jobId: jobId,
+            progress: progress,
+            state: state,
+            message: message,
+            outputPath: outputPath
+        )
+
+        DispatchQueue.main.async {
+            self.onProgress?(payload)
+        }
+    }
+}
+
+@objc public class CapacitorFFmpeg: NSObject {
     var pointerToRustPlugin: UnsafeMutableRawPointer?
 
     /// Progress callback closure that can be set from outside
-    public var onProgress: ((Double, String) -> Void)?
+    var onProgress: ((FFmpegProgressPayload) -> Void)?
 
     override init() {
         super.init()
@@ -97,7 +218,6 @@ private class SelfForReencodeVideo {
     }
 
     deinit {
-        // We have to deinit the Rust managed memory
         if let plugin = self.pointerToRustPlugin {
             deinit_ffmpeg_plugin(plugin)
         }
@@ -109,60 +229,37 @@ private class SelfForReencodeVideo {
         width: Int32,
         height: Int32,
         bitrate: Int32? = nil
-    ) throws {
+    ) throws -> String {
         guard let plugin = self.pointerToRustPlugin else {
             throw FFmpegError.pluginNotInitialized
         }
 
-        // Use provided bitrate or 0 for default
         let bitrateValue = bitrate ?? 0
-
-        // Create the task
-        let longEncodeTask = BGContinuedProcessingTaskRequest(
-            identifier: "ee.forgr.capacitor-ffmpeg.example-app.ffmpeg-reencode",
-            title: "A video export",
-            subtitle: "About to start..."
+        let acceptedJob = FFmpegAcceptedJob(jobId: UUID().uuidString)
+        let encodingState = SelfForReencodeVideo(
+            jobId: acceptedJob.jobId,
+            outputPath: outputPath,
+            onProgress: self.onProgress
         )
 
-        BGTaskScheduler.shared.register(forTaskWithIdentifier: longEncodeTask.identifier, using: nil) { task in
-            guard let task = task as? BGContinuedProcessingTask else { return }
+        DispatchQueue.global(qos: .userInitiated).async {
+            let statePointer = Unmanaged.passRetained(encodingState).toOpaque()
 
-            // Create the encoding state on the heap
-            let selfForReencode = SelfForReencodeVideo(
-                task: task,
-                onProgress: self.onProgress
-            )
-
-            task.progress.totalUnitCount = 100
-            task.progress.completedUnitCount = 0
-
-            // Convert to unmanaged pointer to keep it alive during encoding
-            let selfPtr = Unmanaged.passRetained(selfForReencode).toOpaque()
-
-            // Progress callback that uses the selfPtr
             let progressCallback: @convention(c) (Double, UnsafeMutableRawPointer?) -> Int32 = { progress, selfPointer in
-                guard let selfPointer = selfPointer else { return -1 }
-
-                let selfForReencode = Unmanaged<SelfForReencodeVideo>.fromOpaque(selfPointer).takeUnretainedValue()
-
-                // Update task progress
-                selfForReencode.task.progress.completedUnitCount = Int64(progress * 100)
-
-                // Call Swift progress callback on main queue
-                DispatchQueue.main.async {
-                    selfForReencode.onProgress?(progress, "Re-encoding video...")
+                guard let selfPointer else {
+                    return -1
                 }
 
-                // Check if encoding is complete
-                if progress > 0.99 {
-                    print("Encoding completed with progress: \(progress)")
-                    selfForReencode.task.setTaskCompleted(success: true)
-                }
-
-                return 0 // Success
+                let state = Unmanaged<SelfForReencodeVideo>.fromOpaque(selfPointer).takeUnretainedValue()
+                state.emit(
+                    progress: min(max(progress, 0.0), 0.99),
+                    state: "running",
+                    message: "Re-encoding video...",
+                    outputPath: state.outputPath
+                )
+                return 0
             }
 
-            // Convert Swift strings to C strings and call Rust
             let resultPtr = inputPath.withCString { inputCStr in
                 outputPath.withCString { outputCStr in
                     reencode_video(
@@ -172,38 +269,38 @@ private class SelfForReencodeVideo {
                         width,
                         height,
                         bitrateValue,
-                        selfPtr,
+                        statePointer,
                         progressCallback
                     )
                 }
             }
 
-            // Release the retained reference
-            Unmanaged<SelfForReencodeVideo>.fromOpaque(selfPtr).release()
-
-            // Check the result
+            let state = Unmanaged<SelfForReencodeVideo>.fromOpaque(statePointer).takeRetainedValue()
             let result = resultPtr.pointee
 
             if result.ok != false {
-                print("FFmpeg re-encoding completed successfully")
-                selfForReencode.task.setTaskCompleted(success: true)
+                state.emit(
+                    progress: 1.0,
+                    state: "completed",
+                    message: "Re-encoding completed.",
+                    outputPath: state.outputPath
+                )
             } else {
-                let errorMessage = result.errorString ?? "Unknown error"
-
-                print("FFmpeg re-encoding failed: \(errorMessage)")
-                selfForReencode.task.setTaskCompleted(success: false)
-
-                // Optionally call error callback on main queue
-                DispatchQueue.main.async {
-                    selfForReencode.onProgress?(0.0, "Error: \(errorMessage)")
-                }
+                state.emit(
+                    progress: 0.0,
+                    state: "failed",
+                    message: result.errorString ?? "Unknown error"
+                )
             }
 
-            // Always free the result structure
             free_c_result(resultPtr)
         }
 
-        try BGTaskScheduler.shared.submit(longEncodeTask)
+        return acceptedJob.jobId
+    }
+
+    func getCapabilities() -> FFmpegCapabilitiesPayload {
+        FFmpegCapabilitiesPayload.iosCurrent
     }
 }
 
@@ -212,6 +309,17 @@ public enum FFmpegError: LocalizedError {
     case pluginNotInitialized
     case reencodingFailed(String)
     case invalidPath(String)
+
+    var code: String {
+        switch self {
+        case .pluginNotInitialized:
+            return "PLUGIN_NOT_INITIALIZED"
+        case .reencodingFailed:
+            return "TRANSCODE_FAILED"
+        case .invalidPath:
+            return "INVALID_ARGUMENT"
+        }
+    }
 
     public var errorDescription: String? {
         switch self {
