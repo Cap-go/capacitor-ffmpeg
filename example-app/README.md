@@ -41,7 +41,7 @@ bun run maestro:ios
 bun run maestro:android
 ```
 
-The Android script bootstraps Maestro's embedded driver APKs explicitly and starts the instrumentation runner before running the flows. The CLI still owns the ADB port-forward setup so local runs match CI without fighting Maestro's session setup.
+The Android script bootstraps Maestro's embedded driver APKs explicitly and starts the instrumentation runner before running the flows. The CLI still owns the ADB port-forward setup so local runs match CI without fighting Maestro's session setup. Install Maestro CLI first before running `bun run maestro:android`; the script expects the local CLI artifacts under `$HOME/.maestro`.
 
 ### Native sync
 
