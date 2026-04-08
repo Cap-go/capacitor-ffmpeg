@@ -94,15 +94,27 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: Setup Android SDK tools
-        uses: android-actions/setup-android@v3
       - name: Install Maestro CLI
         run: |
           export MAESTRO_VERSION=2.4.0
           curl -Ls "https://get.maestro.mobile.dev" | bash
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
       - name: Run Android Maestro flows
-        run: cd example-app && ./scripts/run-maestro-android-ci.sh
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_atd
+          arch: x86_64
+          profile: pixel_6
+          emulator-boot-timeout: 900
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none -camera-front none
+          disable-animations: true
+          script: |
+            cd example-app/android
+            ./gradlew assembleDebug
+            adb install -r app/build/outputs/apk/debug/app-debug.apk
+            cd ..
+            bun run maestro:android
       - name: Upload Android Maestro artifacts
         if: always()
         uses: actions/upload-artifact@v4
