@@ -72,6 +72,9 @@ jobs:
         with:
           lfs: true
       - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - name: Install root dependencies
         run: bun i
       - name: Build plugin package
@@ -122,6 +125,9 @@ jobs:
         with:
           lfs: true
       - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - name: Install root dependencies
         run: bun i
       - name: Build plugin package
