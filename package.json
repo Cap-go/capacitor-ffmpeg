@@ -36,7 +36,7 @@
     "test:macos": "bun run test:web && bun run test:ios",
     "test:web": "bun test",
     "test:android": "cd android && ./gradlew test",
-    "test:ios": "xcodebuild -scheme CapgoCapacitorFfmpeg -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest' test",
+    "test:ios": "bun scripts/run-ios-tests.mjs",
     "verify": "bun run verify:ios && bun run verify:android && bun run verify:web",
     "verify:ios": "xcodebuild -scheme CapgoCapacitorFfmpeg -destination generic/platform=iOS",
     "verify:android": "cd android && ./gradlew clean build test && cd ..",
