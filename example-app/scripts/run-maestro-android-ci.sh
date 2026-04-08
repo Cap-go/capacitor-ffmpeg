@@ -10,11 +10,6 @@ find_sdk_tool() {
   local tool="$1"
   local candidate
 
-  if candidate="$(command -v "$tool" 2>/dev/null)"; then
-    printf '%s\n' "$candidate"
-    return 0
-  fi
-
   for candidate in \
     "$SDK_ROOT/cmdline-tools/latest/bin/$tool" \
     "$SDK_ROOT/cmdline-tools"/*/bin/"$tool" \
@@ -26,6 +21,11 @@ find_sdk_tool() {
       return 0
     fi
   done
+
+  if candidate="$(command -v "$tool" 2>/dev/null)"; then
+    printf '%s\n' "$candidate"
+    return 0
+  fi
 
   return 1
 }
@@ -82,7 +82,7 @@ ensure_system_image() {
   fi
 
   accept_android_licenses
-  "$SDKMANAGER_BIN" "platform-tools" "emulator" "$SYSTEM_IMAGE_PACKAGE"
+  "$SDKMANAGER_BIN" --install "platform-tools" "emulator" "$SYSTEM_IMAGE_PACKAGE" >/dev/null
 }
 
 create_default_avd() {
