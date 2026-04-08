@@ -9,14 +9,93 @@ on:
   workflow_call: # Allow this workflow to be called by other workflows
 
 jobs:
+  changes:
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    outputs:
+      android: ${{ steps.filter.outputs.android }}
+      ios: ${{ steps.filter.outputs.ios }}
+      maestro_android: ${{ steps.filter.outputs.maestro_android }}
+      maestro_ios: ${{ steps.filter.outputs.maestro_ios }}
+      web: ${{ steps.filter.outputs.web }}
+      guard_swiftpm: ${{ steps.filter.outputs.guard_swiftpm }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Detect changed areas
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            android:
+              - 'android/**'
+              - 'src/**'
+              - 'scripts/**'
+              - 'package.json'
+              - 'bun.lock'
+              - '.github/workflows/test.yml'
+              - 'example-app/android/**'
+              - 'example-app/src/**'
+              - 'example-app/package.json'
+              - 'example-app/scripts/run-maestro-android*.sh'
+              - 'example-app/.maestro/**'
+            ios:
+              - 'ios/**'
+              - 'Package.swift'
+              - 'CapgoCapacitorFfmpeg.podspec'
+              - 'src/**'
+              - 'scripts/**'
+              - 'package.json'
+              - 'bun.lock'
+              - 'example-app/ios/**'
+              - 'example-app/src/**'
+              - 'example-app/scripts/run-maestro-ios.sh'
+              - 'example-app/.maestro/**'
+            maestro_android:
+              - 'android/**'
+              - 'src/**'
+              - 'scripts/**'
+              - 'package.json'
+              - 'bun.lock'
+              - '.github/workflows/test.yml'
+              - 'example-app/android/**'
+              - 'example-app/src/**'
+              - 'example-app/package.json'
+              - 'example-app/scripts/run-maestro-android*.sh'
+              - 'example-app/.maestro/**'
+            maestro_ios:
+              - 'ios/**'
+              - 'Package.swift'
+              - 'CapgoCapacitorFfmpeg.podspec'
+              - 'src/**'
+              - 'scripts/**'
+              - 'package.json'
+              - 'bun.lock'
+              - 'example-app/ios/**'
+              - 'example-app/src/**'
+              - 'example-app/scripts/run-maestro-ios.sh'
+              - 'example-app/.maestro/**'
+            web:
+              - 'src/**'
+              - 'scripts/**'
+              - 'package.json'
+              - 'bun.lock'
+              - 'README.md'
+              - 'rollup.config.mjs'
+              - 'tsconfig.json'
+              - '.github/workflows/test.yml'
+            guard_swiftpm:
+              - 'Package.swift'
   guard_swiftpm_version:
+    needs: changes
+    if: needs.changes.outputs.guard_swiftpm == 'true'
     timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
       - name: Check out
         uses: actions/checkout@v6
-        with:
-          lfs: true
       - name: Enforce capacitor-swift-pm version
         run: |
           set -euo pipefail
@@ -25,13 +104,13 @@ jobs:
             exit 1
           fi
   build_android:
+    needs: changes
+    if: needs.changes.outputs.android == 'true'
     timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
       - name: Check out
         uses: actions/checkout@v6
-        with:
-          lfs: true
       - uses: oven-sh/setup-bun@v2
       - name: Install dependencies
         id: install_code
@@ -47,6 +126,8 @@ jobs:
         id: build_code
         run: bun run verify:android
   build_ios:
+    needs: changes
+    if: needs.changes.outputs.ios == 'true'
     timeout-minutes: 30
     runs-on: macOS-latest
     steps:
@@ -66,12 +147,11 @@ jobs:
   maestro_android:
     timeout-minutes: 60
     runs-on: ubuntu-latest
-    needs: [web, build_android, build_ios, guard_swiftpm_version]
+    needs: [changes, build_android]
+    if: needs.changes.outputs.maestro_android == 'true'
     steps:
       - name: Check out
         uses: actions/checkout@v6
-        with:
-          lfs: true
       - uses: oven-sh/setup-bun@v2
       - uses: actions/setup-node@v4
         with:
@@ -118,7 +198,8 @@ jobs:
   maestro_ios:
     timeout-minutes: 60
     runs-on: macOS-latest
-    needs: [web, build_android, build_ios, guard_swiftpm_version]
+    needs: [changes, build_ios, guard_swiftpm_version]
+    if: needs.changes.outputs.maestro_ios == 'true'
     steps:
       - name: Check out
         uses: actions/checkout@v6
@@ -177,14 +258,14 @@ jobs:
           report_paths: example-app/build/maestro/ios-report.xml
           require_tests: true
   web:
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
     timeout-minutes: 30
     runs-on: ubuntu-latest
     name: 'Build code and test'
     steps:
       - name: Check out
         uses: actions/checkout@v6
-        with:
-          lfs: true
       - uses: oven-sh/setup-bun@v2
       - name: Install dependencies
         id: install_code
