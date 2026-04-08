@@ -7,10 +7,6 @@ OUTPUT_DIR="$ROOT_DIR/build/maestro"
 EMULATOR_LOG="$OUTPUT_DIR/android-emulator.log"
 
 ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
-SDKMANAGER="${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager"
-AVDMANAGER="${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/avdmanager"
-EMULATOR_BIN="${ANDROID_SDK_ROOT}/emulator/emulator"
-ADB_BIN="${ANDROID_SDK_ROOT}/platform-tools/adb"
 
 ANDROID_API_LEVEL="${ANDROID_API_LEVEL:-34}"
 ANDROID_EMULATOR_ARCH="${ANDROID_EMULATOR_ARCH:-x86_64}"
@@ -22,7 +18,35 @@ ANDROID_BOOT_TIMEOUT_SECONDS="${ANDROID_BOOT_TIMEOUT_SECONDS:-420}"
 
 mkdir -p "$OUTPUT_DIR"
 
-if [[ ! -x "$SDKMANAGER" || ! -x "$AVDMANAGER" || ! -x "$EMULATOR_BIN" || ! -x "$ADB_BIN" ]]; then
+find_sdk_tool() {
+  local tool="$1"
+  local candidate
+
+  if candidate="$(command -v "$tool" 2>/dev/null)"; then
+    echo "$candidate"
+    return 0
+  fi
+
+  for candidate in \
+    "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/$tool" \
+    "$ANDROID_SDK_ROOT/cmdline-tools"/*/bin/"$tool" \
+    "$ANDROID_SDK_ROOT/emulator/$tool" \
+    "$ANDROID_SDK_ROOT/platform-tools/$tool"; do
+    if [[ -x "$candidate" ]]; then
+      echo "$candidate"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+SDKMANAGER="$(find_sdk_tool sdkmanager || true)"
+AVDMANAGER="$(find_sdk_tool avdmanager || true)"
+EMULATOR_BIN="$(find_sdk_tool emulator || true)"
+ADB_BIN="$(find_sdk_tool adb || true)"
+
+if [[ -z "$SDKMANAGER" || -z "$AVDMANAGER" || -z "$EMULATOR_BIN" || -z "$ADB_BIN" ]]; then
   echo "Android SDK tools are missing under $ANDROID_SDK_ROOT." >&2
   exit 1
 fi
