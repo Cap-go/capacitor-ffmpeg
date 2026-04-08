@@ -111,11 +111,9 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none -camera-front none
           disable-animations: true
           script: |
-            cd example-app/android
-            ./gradlew assembleDebug
-            adb install -r app/build/outputs/apk/debug/app-debug.apk
-            cd ..
-            bun run maestro:android
+            ./example-app/android/gradlew -p ./example-app/android assembleDebug
+            adb install -r example-app/android/app/build/outputs/apk/debug/app-debug.apk
+            cd example-app && bun run maestro:android
       - name: Upload Android Maestro artifacts
         if: always()
         uses: actions/upload-artifact@v4
