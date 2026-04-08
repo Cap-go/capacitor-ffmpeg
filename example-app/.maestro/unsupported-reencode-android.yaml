@@ -4,18 +4,14 @@ name: Verify unsupported Android re-encode contract
 - stopApp
 - launchApp
 - extendedWaitUntil:
-    visible: "FFmpeg capability playground"
+    visible: "Run runtime checks"
     timeout: 30000
-- tapOn: "Show video workflow"
+- tapOn: "Run runtime checks"
 - extendedWaitUntil:
-    visible: "Verify unsupported path"
-    timeout: 30000
-- tapOn: "Verify unsupported path"
-- extendedWaitUntil:
-    visible: "Unsupported re-encode smoke test"
+    visible: "Unsupported re-encode contract"
     timeout: 30000
 - assertVisible:
-    text: "Unsupported re-encode smoke test"
+    text: "Unsupported re-encode contract"
 - assertVisible:
-    text: "passed|Passed"
+    text: "reencodeVideo is currently only available on iOS."
 - takeScreenshot: "unsupported-reencode-android-complete"
