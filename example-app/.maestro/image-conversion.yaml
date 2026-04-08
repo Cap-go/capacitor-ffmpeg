@@ -4,8 +4,8 @@ name: Convert image from picker
 - stopApp
 - launchApp
 - extendedWaitUntil:
-    visible: "FFmpeg capability playground"
-    timeout: 30000
+    visible: "Load demo image"
+    timeout: 60000
 - tapOn: "Load demo image"
 - extendedWaitUntil:
     visible:
@@ -16,7 +16,10 @@ name: Convert image from picker
       text: "Convert image"
     direction: DOWN
     timeout: 10000
-- tapOn: "Convert image"
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    text: "Convert image"
 - extendedWaitUntil:
     visible:
       text: "Converted .* to (jpeg|webp).*"

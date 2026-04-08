@@ -89,23 +89,18 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '21'
+      - name: Enable KVM access
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
       - name: Install Maestro CLI
         run: |
           export MAESTRO_VERSION=2.4.0
           curl -Ls "https://get.maestro.mobile.dev" | bash
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
       - name: Run Android Maestro flows
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 34
-          profile: pixel_6
-          arch: x86_64
-          script: |
-            cd example-app/android
-            ./gradlew assembleDebug
-            adb install -r app/build/outputs/apk/debug/app-debug.apk
-            cd ..
-            bun run maestro:android
+        run: cd example-app && ./scripts/run-maestro-android-ci.sh
       - name: Upload Android Maestro artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -113,7 +108,7 @@ jobs:
           name: maestro-android-artifacts
           path: example-app/build/maestro
       - name: Publish Android Maestro JUnit report
-        if: always()
+        if: always() && hashFiles('example-app/build/maestro/android-report.xml') != ''
         uses: mikepenz/action-junit-report@v5
         with:
           report_paths: example-app/build/maestro/android-report.xml
@@ -174,7 +169,7 @@ jobs:
           name: maestro-ios-artifacts
           path: example-app/build/maestro
       - name: Publish iOS Maestro JUnit report
-        if: always()
+        if: always() && hashFiles('example-app/build/maestro/ios-report.xml') != ''
         uses: mikepenz/action-junit-report@v5
         with:
           report_paths: example-app/build/maestro/ios-report.xml

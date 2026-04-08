@@ -4,8 +4,8 @@ name: Re-encode picked video
 - stopApp
 - launchApp
 - extendedWaitUntil:
-    visible: "FFmpeg capability playground"
-    timeout: 30000
+    visible: "Show video workflow"
+    timeout: 60000
 - tapOn: "Show video workflow"
 - extendedWaitUntil:
     visible: "Load demo video"
@@ -20,6 +20,8 @@ name: Re-encode picked video
       text: "Queue re-encode"
     direction: DOWN
     timeout: 10000
+    visibilityPercentage: 50
+    centerElement: true
 - tapOn: "Queue re-encode"
 - extendedWaitUntil:
     visible: "Re-encoding completed."

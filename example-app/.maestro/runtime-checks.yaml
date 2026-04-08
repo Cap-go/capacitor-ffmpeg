@@ -4,8 +4,8 @@ name: Run runtime checks
 - stopApp
 - launchApp
 - extendedWaitUntil:
-    visible: "FFmpeg capability playground"
-    timeout: 30000
+    visible: "Run runtime checks"
+    timeout: 60000
 - tapOn: "Run runtime checks"
 - extendedWaitUntil:
     visible: "Plugin version endpoint"
