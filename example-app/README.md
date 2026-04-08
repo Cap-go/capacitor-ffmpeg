@@ -41,7 +41,7 @@ bun run maestro:ios
 bun run maestro:android
 ```
 
-The Android script bootstraps Maestro's embedded driver APKs explicitly, starts the instrumentation runner, and forwards the gRPC bridge before running the flows. That makes local Android runs match CI instead of depending on Maestro's flaky auto-bootstrap behavior.
+The Android script bootstraps Maestro's embedded driver APKs explicitly and starts the instrumentation runner before running the flows. The CLI still owns the ADB port-forward setup so local runs match CI without fighting Maestro's session setup.
 
 ### Native sync
 

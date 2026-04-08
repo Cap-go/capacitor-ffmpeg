@@ -63,10 +63,6 @@ if [[ "${DRIVER_READY:-0}" -ne 1 ]]; then
   exit 1
 fi
 
-adb -s "$DEVICE_ID" forward --remove tcp:7001 >/dev/null 2>&1 || true
-adb -s "$DEVICE_ID" forward tcp:7001 tcp:7001 >/dev/null
-sleep 2
-
 JAVA_TOOL_OPTIONS=-Djava.net.preferIPv4Stack=true maestro test \
   --no-reinstall-driver \
   -p android \
