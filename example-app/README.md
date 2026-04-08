@@ -42,7 +42,7 @@ bun run maestro:android
 bun run maestro:android:ci
 ```
 
-The Android script bootstraps Maestro's embedded driver APKs explicitly, starts the instrumentation runner, and forwards the gRPC bridge before running the flows. That makes local Android runs match CI instead of depending on Maestro's flaky auto-bootstrap behavior.
+The Android script now uses Maestro's supported default driver bootstrap path. If you need the old explicit driver install and port-forward workaround for a local machine, set `MAESTRO_ANDROID_MANUAL_DRIVER=1`.
 
 `bun run maestro:android:ci` is the full Android local/CI launcher. It:
 
@@ -55,6 +55,7 @@ Useful overrides:
 - `MAESTRO_ANDROID_AVD` to force a specific local AVD name
 - `MAESTRO_ANDROID_SKIP_PREBUILD=1` to skip the build/sync/assemble phase
 - `MAESTRO_ANDROID_PREPARE_ONLY=1` to stop after booting the emulator and installing the app
+- `MAESTRO_ANDROID_MANUAL_DRIVER=1` to force the old explicit Maestro driver install/instrumentation flow
 
 ### Native sync
 
