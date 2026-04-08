@@ -1,0 +1,4 @@
+module CapacitorFFmpegNativeCore [system] {
+    header "CapacitorFFmpegNativeCore.h"
+    export *
+}

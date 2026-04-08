@@ -1,9 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:base",
-    "schedule:earlyMondays"
-  ],
+  "extends": ["config:base", "schedule:earlyMondays"],
   "dependencyDashboard": false,
   "lockFileMaintenance": {
     "enabled": true,
@@ -13,42 +10,27 @@
   },
   "packageRules": [
     {
-      "matchUpdateTypes": [
-        "minor",
-        "patch"
-      ],
+      "matchUpdateTypes": ["minor", "patch"],
       "matchCurrentVersion": "!/^0/",
       "automerge": true
     },
     {
-      "matchPackageNames": [
-        "eslint"
-      ],
-      "matchManagers": [
-        "npm"
-      ],
+      "matchPackageNames": ["eslint"],
+      "matchManagers": ["npm"],
       "enabled": false
     },
     {
-      "matchPackagePatterns": [
-        "^com\\.google\\..*"
-      ],
+      "matchPackagePatterns": ["^com\\.google\\..*"],
       "matchCurrentVersion": "/^.*-android$/",
       "allowedVersions": "/^.*-android$/"
     },
     {
-      "matchPackagePatterns": [
-        "^com\\.android\\.tools\\.build\\:gradle$"
-      ],
-      "matchManagers": [
-        "gradle"
-      ],
+      "matchPackagePatterns": ["^com\\.android\\.tools\\.build\\:gradle$"],
+      "matchManagers": ["gradle"],
       "enabled": false
     },
     {
-      "matchManagers": [
-        "swift-pm"
-      ],
+      "matchManagers": ["swift-pm"],
       "matchPackagePatterns": [
         "^https://github.com/ionic-team/capacitor-swift-pm\\.git$",
         "^ionic-team/capacitor-swift-pm$",
@@ -58,35 +40,20 @@
       "enabled": false
     },
     {
-      "matchDepTypes": [
-        "peerDependencies"
-      ],
-      "matchPackageNames": [
-        "@capacitor/core"
-      ],
-      "matchUpdateTypes": [
-        "minor",
-        "patch"
-      ],
+      "matchDepTypes": ["peerDependencies"],
+      "matchPackageNames": ["@capacitor/core"],
+      "matchUpdateTypes": ["minor", "patch"],
       "enabled": false
     },
     {
-      "matchDepTypes": [
-        "peerDependencies"
-      ],
-      "matchPackageNames": [
-        "@capacitor/core"
-      ],
+      "matchDepTypes": ["peerDependencies"],
+      "matchPackageNames": ["@capacitor/core"],
       "rangeStrategy": "replace",
       "allowedVersions": "/^>=\\d+\\.0\\.0$/"
     },
     {
-      "matchPackageNames": [
-        "androidx.core:core"
-      ],
-      "matchManagers": [
-        "gradle"
-      ],
+      "matchPackageNames": ["androidx.core:core"],
+      "matchManagers": ["gradle"],
       "enabled": false
     }
   ]

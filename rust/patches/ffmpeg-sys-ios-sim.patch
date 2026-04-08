@@ -1,0 +1,144 @@
+diff --git a/build.rs b/build.rs
+index 234160e..fe3ec5c 100644
+--- a/build.rs
++++ b/build.rs
+@@ -212,8 +212,15 @@ fn find_sysroot() -> Option<String> {
+     }
+ 
+     if env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("ios") {
++        let target = env::var("TARGET").unwrap();
++        let sdk = if target.contains("-sim") {
++            "iphonesimulator"
++        } else {
++            "iphoneos"
++        };
++
+         let xcode_output = Command::new("xcrun")
+-            .args(["--sdk", "iphoneos", "--show-sdk-path"])
++            .args(["--sdk", sdk, "--show-sdk-path"])
+             .output()
+             .expect("failed to run xcrun");
+ 
+@@ -304,7 +311,21 @@ fn build(sysroot: Option<&str>) -> io::Result<()> {
+         let cc = cc::Build::new();
+ 
+         // Apple-clang needs this, -arch is not enough.
+-        let target_flag = format!("--target={}", target);
++        let clang_target = if target.contains("ios-sim") {
++            let arch = if target.starts_with("aarch64") {
++                "arm64".to_string()
++            } else if target.starts_with("x86_64") {
++                "x86_64".to_string()
++            } else {
++                env::var("CARGO_CFG_TARGET_ARCH").unwrap()
++            };
++
++            format!("{arch}-apple-ios15.0-simulator")
++        } else {
++            target.clone()
++        };
++
++        let target_flag = format!("--target={}", clang_target);
+         if cc.is_flag_supported(&target_flag).unwrap_or(false) {
+             configure.arg(format!("--extra-cflags={}", target_flag));
+             configure.arg(format!("--extra-ldflags={}", target_flag));
+@@ -352,8 +373,14 @@ fn build(sysroot: Option<&str>) -> io::Result<()> {
+         let sysroot = sysroot.expect("The sysroot is required for ios cross compilation, make sure to have available xcode or provide the $SYSROOT env var");
+         configure.arg(format!("--sysroot={}", sysroot));
+ 
++        let sdk = if target.contains("-sim") {
++            "iphonesimulator"
++        } else {
++            "iphoneos"
++        };
++
+         let cc = Command::new("xcrun")
+-            .args(["--sdk", "iphoneos", "-f", "clang"])
++            .args(["--sdk", sdk, "-f", "clang"])
+             .output()
+             .expect("failed to run xcrun")
+             .stdout;
+@@ -795,6 +822,17 @@ fn check_features(
+     .expect("Write failed");
+ 
+     let executable = out_dir.join(if cfg!(windows) { "check.exe" } else { "check" });
++    let target = env::var("TARGET").unwrap_or_default();
++    let should_sanitize_ios_sim_env = target.contains("ios-sim");
++    let mut preserved_env: Vec<(&str, Option<std::ffi::OsString>)> = Vec::new();
++
++    if should_sanitize_ios_sim_env {
++        for key in ["SDKROOT", "CFLAGS", "IPHONEOS_DEPLOYMENT_TARGET"] {
++            preserved_env.push((key, env::var_os(key)));
++            env::remove_var(key);
++        }
++    }
++
+     let mut compiler = cc::Build::new()
+         .target(&env::var("HOST").unwrap()) // don't cross-compile this
+         .get_compiler()
+@@ -813,6 +851,15 @@ fn check_features(
+         .expect("Command failed")
+         .success()
+     {
++        if should_sanitize_ios_sim_env {
++            for (key, value) in preserved_env {
++                match value {
++                    Some(value) => env::set_var(key, value),
++                    None => env::remove_var(key)
++                }
++            }
++        }
++
+         panic!("Compile failed");
+     }
+ 
+@@ -821,6 +868,15 @@ fn check_features(
+         .output()
+         .expect("Check failed");
+     if !check_output.status.success() {
++        if should_sanitize_ios_sim_env {
++            for (key, value) in preserved_env {
++                match value {
++                    Some(value) => env::set_var(key, value),
++                    None => env::remove_var(key)
++                }
++            }
++        }
++
+         panic!(
+             "{} failed: {}\n{}",
+             executable.display(),
+@@ -829,6 +885,15 @@ fn check_features(
+         );
+     }
+ 
++    if should_sanitize_ios_sim_env {
++        for (key, value) in preserved_env {
++            match value {
++                Some(value) => env::set_var(key, value),
++                None => env::remove_var(key)
++            }
++        }
++    }
++
+     let stdout = str::from_utf8(&check_output.stdout).unwrap();
+ 
+     println!("stdout of {}={}", executable.display(), stdout);
+@@ -1450,9 +1515,15 @@ fn main() {
+         ],
+     );
+ 
+-    let clang_includes = include_paths
++    let mut clang_includes = include_paths
+         .iter()
+-        .map(|include| format!("-I{}", include.to_string_lossy()));
++        .map(|include| format!("-I{}", include.to_string_lossy()))
++        .collect::<Vec<_>>();
++
++    let bindgen_target = env::var("TARGET").unwrap_or_default();
++    if bindgen_target.contains("ios-sim") {
++        clang_includes.push("--target=arm64-apple-ios15.0-simulator".to_string());
++    }
+ 
+     // The bindgen::Builder is the main entry point
+     // to bindgen, and lets you build up options for

@@ -1,0 +1,17 @@
+appId: app.capgo.ffmpeg
+name: Run runtime checks
+---
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Run runtime checks"
+    timeout: 60000
+- tapOn: "Run runtime checks"
+- extendedWaitUntil:
+    visible: "Plugin version endpoint"
+    timeout: 30000
+- assertVisible: "Capability matrix endpoint"
+- assertVisible: "Progress listener registration"
+- assertVisible: "Unsupported re-encode contract"
+- assertVisible: "Unsupported image conversion contract"
+- takeScreenshot: "runtime-checks-complete"

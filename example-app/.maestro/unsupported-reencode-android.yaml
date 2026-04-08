@@ -1,0 +1,21 @@
+appId: app.capgo.ffmpeg
+name: Verify unsupported Android re-encode contract
+---
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "FFmpeg capability playground"
+    timeout: 30000
+- tapOn: "Show video workflow"
+- extendedWaitUntil:
+    visible: "Verify unsupported path"
+    timeout: 30000
+- tapOn: "Verify unsupported path"
+- extendedWaitUntil:
+    visible: "Unsupported re-encode smoke test"
+    timeout: 30000
+- assertVisible:
+    text: "Unsupported re-encode smoke test"
+- assertVisible:
+    text: "passed|Passed"
+- takeScreenshot: "unsupported-reencode-android-complete"

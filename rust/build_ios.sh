@@ -7,6 +7,13 @@ set -e
 # Allow pkg-config to work when cross-compiling
 export PKG_CONFIG_ALLOW_CROSS=1
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+X264_PKGCONFIG_DIR="$SCRIPT_DIR/x264-build-ios/lib/pkgconfig"
+
+if [ -d "$X264_PKGCONFIG_DIR" ]; then
+    export PKG_CONFIG_PATH="${X264_PKGCONFIG_DIR}${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
+fi
+
 echo "Building Rust library for iOS device only..."
 
 # Install iOS device target if not already installed

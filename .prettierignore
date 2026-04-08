@@ -1,1 +1,6 @@
 example-app
+.build
+.swiftpm
+rust/target
+rust/ffmpeg-sys
+rust/x264-build-ios-sim-arm64

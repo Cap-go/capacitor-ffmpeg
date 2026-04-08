@@ -1,27 +1,38 @@
 {
-  "name": "capacitor-app",
+  "name": "capacitor-ffmpeg-example",
   "version": "1.0.0",
-  "description": "An Amazing Capacitor App",
+  "description": "Feature playground for @capgo/capacitor-ffmpeg",
   "type": "module",
   "keywords": [
     "capacitor",
-    "mobile"
+    "mobile",
+    "ffmpeg",
+    "example"
   ],
   "scripts": {
     "start": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "verify": "bun run build && bun run test",
+    "sync:android": "bunx cap sync android && bun scripts/fix-android-plugin-link.mjs",
+    "sync:ios": "bunx cap sync ios",
+    "maestro:android": "./scripts/run-maestro-android.sh",
+    "maestro:ios": "./scripts/run-maestro-ios.sh"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.0",
     "@capacitor/core": "^8.0.0",
+    "@capacitor/filesystem": "^8.0.0",
     "@capacitor/ios": "^8.0.0",
-    "@capgo/camera-preview": "^7.3.7",
     "@capgo/capacitor-ffmpeg": "file:.."
   },
   "devDependencies": {
     "@capacitor/cli": "^8.0.0",
-    "vite": "^7.3.1"
+    "jsdom": "^26.1.0",
+    "vite": "^7.3.1",
+    "vitest": "^3.2.4"
   },
   "author": "",
   "license": "ISC"
