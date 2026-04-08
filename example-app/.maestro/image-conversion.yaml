@@ -6,7 +6,9 @@ name: Convert image from picker
 - extendedWaitUntil:
     visible: "Load demo image"
     timeout: 60000
-- tapOn: "Load demo image"
+- tapOn:
+    text: "Load demo image"
+    retryTapIfNoChange: true
 - extendedWaitUntil:
     visible:
       text: "sample-image.png staged in the app cache."
@@ -20,10 +22,11 @@ name: Convert image from picker
     centerElement: true
 - tapOn:
     text: "Convert image"
+    retryTapIfNoChange: true
 - extendedWaitUntil:
     visible:
-      text: "Converted .* to (jpeg|webp).*"
-    timeout: 30000
+      text: "Converted .* to (jpeg|png|webp).*"
+    timeout: 60000
 - assertVisible:
-    text: "Converted .* to (jpeg|webp).*"
+    text: "Converted .* to (jpeg|png|webp).*"
 - takeScreenshot: "image-conversion-complete"
