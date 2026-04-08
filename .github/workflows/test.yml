@@ -16,8 +16,6 @@ jobs:
     steps:
       - name: Check out
         uses: actions/checkout@v6
-        with:
-          lfs: true
       - name: Enforce capacitor-swift-pm version
         run: |
           set -euo pipefail
@@ -31,8 +29,6 @@ jobs:
     steps:
       - name: Check out
         uses: actions/checkout@v6
-        with:
-          lfs: true
       - uses: oven-sh/setup-bun@v2
       - name: Install dependencies
         id: install_code
@@ -48,22 +44,33 @@ jobs:
         id: build_code
         run: bun run verify:android
   build_ios:
-    timeout-minutes: 30
+    timeout-minutes: 90
     runs-on: macOS-latest
     steps:
       - name: Check out
         uses: actions/checkout@v6
         with:
-          lfs: true
+          submodules: recursive
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
       - uses: oven-sh/setup-bun@v2
       - name: Install dependencies
         id: install_code
         run: bun i
       - name: Check plugin wiring
         run: bun run check:wiring
+      - name: Build native iOS core
+        run: cd rust && ./build_native_xcframework.sh
       - name: Build
         id: build_code
         run: bun run verify:ios && bun run test:macos
+      - name: Archive native iOS core artifact
+        run: tar -czf /tmp/native-ios-core-xcframework.tgz -C ios CapacitorFFmpegNativeCore.xcframework
+      - name: Upload native iOS core artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-ios-core-xcframework
+          path: /tmp/native-ios-core-xcframework.tgz
   maestro_android:
     timeout-minutes: 60
     runs-on: ubuntu-latest
@@ -71,8 +78,6 @@ jobs:
     steps:
       - name: Check out
         uses: actions/checkout@v6
-        with:
-          lfs: true
       - uses: oven-sh/setup-bun@v2
       - uses: actions/setup-node@v4
         with:
@@ -133,8 +138,15 @@ jobs:
     steps:
       - name: Check out
         uses: actions/checkout@v6
+      - name: Download native iOS core artifact
+        uses: actions/download-artifact@v4
         with:
-          lfs: true
+          name: native-ios-core-xcframework
+          path: /tmp
+      - name: Restore native iOS core artifact
+        run: |
+          rm -rf ios/CapacitorFFmpegNativeCore.xcframework
+          tar -xzf /tmp/native-ios-core-xcframework.tgz -C ios
       - uses: oven-sh/setup-bun@v2
       - uses: actions/setup-node@v4
         with:
@@ -194,8 +206,6 @@ jobs:
     steps:
       - name: Check out
         uses: actions/checkout@v6
-        with:
-          lfs: true
       - uses: oven-sh/setup-bun@v2
       - name: Install dependencies
         id: install_code
