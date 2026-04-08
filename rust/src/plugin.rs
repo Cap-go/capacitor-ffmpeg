@@ -398,7 +398,12 @@ impl Transcoder {
                     frame_count,
                     timestamp
                 );
-                let progress = frame_count as f64 / frames as f64;
+                let progress = if frames > 0 {
+                    (frame_count as f64 / frames as f64).clamp(0.0, 1.0)
+                } else {
+                    0.0
+                };
+                let progress = if progress.is_finite() { progress } else { 0.0 };
         
                 match inform_about_progress.as_ref()(progress) {
                     Ok(_) => (),

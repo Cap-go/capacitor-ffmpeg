@@ -836,10 +836,13 @@ export function createExampleApp({
     }
 
     const bitrateValue = refs.bitrateField.value.trim();
+    const outputPath = buildSuggestedOutputPath(state.selectedVideoInput.uri, now(), 'reencoded', 'mp4');
+    state.selectedVideoOutputPath = outputPath;
+    renderVideoSelection();
 
     return {
       inputPath: state.selectedVideoInput.uri,
-      outputPath: state.selectedVideoOutputPath,
+      outputPath,
       width: parsePositiveInteger(refs.widthField, 'Width'),
       height: parsePositiveInteger(refs.heightField, 'Height'),
       bitrate: bitrateValue ? parsePositiveInteger(refs.bitrateField, 'Bitrate') : undefined,
@@ -1199,8 +1202,11 @@ export function createExampleApp({
 
   refs.videoPickerInput.addEventListener('change', async () => {
     const file = refs.videoPickerInput.files?.[0];
-    await handleVideoPicked(file);
-    refs.videoPickerInput.value = '';
+    try {
+      await handleVideoPicked(file);
+    } finally {
+      refs.videoPickerInput.value = '';
+    }
   });
 
   refs.loadDemoVideoButton.addEventListener('click', async () => {
@@ -1225,8 +1231,11 @@ export function createExampleApp({
 
   refs.imagePickerInput.addEventListener('change', async () => {
     const file = refs.imagePickerInput.files?.[0];
-    await handleImagePicked(file);
-    refs.imagePickerInput.value = '';
+    try {
+      await handleImagePicked(file);
+    } finally {
+      refs.imagePickerInput.value = '';
+    }
   });
 
   refs.loadDemoImageButton.addEventListener('click', async () => {

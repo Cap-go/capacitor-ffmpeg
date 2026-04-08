@@ -51,10 +51,17 @@ trap cleanup EXIT
 
 for _ in $(seq 1 20); do
   if adb -s "$DEVICE_ID" shell ps -A | grep -q 'dev.mobile.maestro'; then
+    DRIVER_READY=1
     break
   fi
   sleep 1
 done
+
+if [[ "${DRIVER_READY:-0}" -ne 1 ]]; then
+  echo "Maestro Android driver did not start on device $DEVICE_ID." >&2
+  cat "$DRIVER_LOG" >&2 || true
+  exit 1
+fi
 
 adb -s "$DEVICE_ID" forward --remove tcp:7001 >/dev/null 2>&1 || true
 adb -s "$DEVICE_ID" forward tcp:7001 tcp:7001 >/dev/null

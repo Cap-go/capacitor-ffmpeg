@@ -6,4 +6,4 @@ include ':capacitor-filesystem'
 project(':capacitor-filesystem').projectDir = new File('../node_modules/.bun/@capacitor+filesystem@8.1.2+15e98482558ccfe6/node_modules/@capacitor/filesystem/android')
 
 include ':capgo-capacitor-ffmpeg'
-project(':capgo-capacitor-ffmpeg').projectDir = new File('../node_modules/.bun/@capgo+capacitor-ffmpeg@file+../node_modules/@capgo/capacitor-ffmpeg/android')
+project(':capgo-capacitor-ffmpeg').projectDir = new File(settingsDir, '../../android')

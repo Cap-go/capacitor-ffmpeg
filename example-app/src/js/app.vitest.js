@@ -107,13 +107,15 @@ describe('example app', () => {
   });
 
   it('loads version and capabilities on init', async () => {
+    const capabilities = createCapabilities('web');
+    ffmpeg.getCapabilities.mockResolvedValue(capabilities);
     const app = mountApp({ ffmpeg, filesystem });
 
     await app.init();
 
     expect(app.refs.platformValue.textContent).toBe('web');
     expect(app.refs.versionValue.textContent).toBe('1.2.3');
-    expect(app.refs.capabilitiesGrid.children.length).toBe(10);
+    expect(app.refs.capabilitiesGrid.children.length).toBe(Object.keys(capabilities.features).length);
     expect(app.refs.queueReencodeButton.disabled).toBe(true);
     expect(app.refs.convertImageButton.disabled).toBe(true);
     expect(ffmpeg.addListener).toHaveBeenCalledWith('progress', expect.any(Function));

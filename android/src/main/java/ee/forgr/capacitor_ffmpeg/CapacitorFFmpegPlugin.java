@@ -51,6 +51,11 @@ public class CapacitorFFmpegPlugin extends Plugin {
                 return;
             }
 
+            if (inputFile.getCanonicalFile().equals(outputFile.getCanonicalFile())) {
+                call.reject("In-place conversion is not allowed. Choose a different output path.", "INVALID_ARGUMENT");
+                return;
+            }
+
             final Bitmap bitmap = BitmapFactory.decodeFile(inputFile.getAbsolutePath());
             if (bitmap == null) {
                 call.reject("Could not decode the input image.", "INVALID_ARGUMENT");

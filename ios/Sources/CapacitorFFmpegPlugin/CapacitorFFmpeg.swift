@@ -313,9 +313,26 @@ private final class SelfForReencodeVideo {
             throw FFmpegError.pluginNotInitialized
         }
 
-        let resolvedInputPath = try resolveFilesystemPath(from: inputPath)
-        let resolvedOutputPath = try resolveFilesystemPath(from: outputPath)
+        guard width > 0 else {
+            throw FFmpegError.invalidArgument("Width must be greater than 0.")
+        }
+        guard height > 0 else {
+            throw FFmpegError.invalidArgument("Height must be greater than 0.")
+        }
+
         let bitrateValue = bitrate ?? 0
+        guard bitrateValue >= 0 else {
+            throw FFmpegError.invalidArgument("Bitrate must be greater than or equal to 0.")
+        }
+
+        let inputURL = try resolveFileURL(from: inputPath).standardizedFileURL
+        let outputURL = try resolveFileURL(from: outputPath).standardizedFileURL
+        guard inputURL.path != outputURL.path else {
+            throw FFmpegError.invalidArgument("In-place conversion is not allowed. Choose a different output path.")
+        }
+
+        let resolvedInputPath = inputURL.path
+        let resolvedOutputPath = outputURL.path
         let acceptedJob = FFmpegAcceptedJob(jobId: UUID().uuidString)
         let encodingState = SelfForReencodeVideo(
             jobId: acceptedJob.jobId,
@@ -396,13 +413,20 @@ private final class SelfForReencodeVideo {
         format: String,
         quality: Double? = nil
     ) throws -> FFmpegConvertedImage {
-        let inputURL = try resolveFileURL(from: inputPath)
-        let outputURL = try resolveFileURL(from: outputPath)
+        let inputURL = try resolveFileURL(from: inputPath).standardizedFileURL
+        let outputURL = try resolveFileURL(from: outputPath).standardizedFileURL
         let destinationType = try resolveDestinationType(for: format)
         let normalizedQuality = try resolveQuality(quality)
 
+        guard inputURL.path != outputURL.path else {
+            throw FFmpegError.invalidArgument("In-place conversion is not allowed. Choose a different output path.")
+        }
+
         guard let source = CGImageSourceCreateWithURL(inputURL as CFURL, nil) else {
             throw FFmpegError.invalidPath(inputPath)
+        }
+        guard let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
+            throw FFmpegError.reencodingFailed("Could not decode the input image.")
         }
 
         let outputDirectory = outputURL.deletingLastPathComponent()
@@ -424,7 +448,7 @@ private final class SelfForReencodeVideo {
             properties[kCGImageDestinationLossyCompressionQuality] = normalizedQuality
         }
 
-        CGImageDestinationAddImageFromSource(destination, source, 0, properties as CFDictionary)
+        CGImageDestinationAddImage(destination, image, properties as CFDictionary)
 
         guard CGImageDestinationFinalize(destination) else {
             throw FFmpegError.reencodingFailed("The converted image could not be finalized.")
