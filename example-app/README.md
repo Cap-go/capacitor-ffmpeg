@@ -39,9 +39,22 @@ bun run verify
 ```bash
 bun run maestro:ios
 bun run maestro:android
+bun run maestro:android:ci
 ```
 
 The Android script bootstraps Maestro's embedded driver APKs explicitly, starts the instrumentation runner, and forwards the gRPC bridge before running the flows. That makes local Android runs match CI instead of depending on Maestro's flaky auto-bootstrap behavior.
+
+`bun run maestro:android:ci` is the full Android local/CI launcher. It:
+
+- boots an existing local AVD when possible
+- falls back to creating a supported Android 33 emulator if no AVD exists
+- builds the plugin and example app, syncs Android, installs the debug APK, and then runs the Maestro flows
+
+Useful overrides:
+
+- `MAESTRO_ANDROID_AVD` to force a specific local AVD name
+- `MAESTRO_ANDROID_SKIP_PREBUILD=1` to skip the build/sync/assemble phase
+- `MAESTRO_ANDROID_PREPARE_ONLY=1` to stop after booting the emulator and installing the app
 
 ### Native sync
 

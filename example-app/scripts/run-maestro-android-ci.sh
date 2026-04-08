@@ -2,152 +2,186 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-ANDROID_DIR="$ROOT_DIR/android"
-OUTPUT_DIR="$ROOT_DIR/build/maestro"
-EMULATOR_LOG="$OUTPUT_DIR/android-emulator.log"
+REPO_DIR="$(cd "$ROOT_DIR/.." && pwd)"
 
-ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-$HOME/Library/Android/sdk}}"
+ADB_BIN="${ADB_BIN:-$SDK_ROOT/platform-tools/adb}"
+EMULATOR_BIN="${EMULATOR_BIN:-$SDK_ROOT/emulator/emulator}"
+SDKMANAGER_BIN="${SDKMANAGER_BIN:-$SDK_ROOT/tools/bin/sdkmanager}"
+AVDMANAGER_BIN="${AVDMANAGER_BIN:-$SDK_ROOT/tools/bin/avdmanager}"
 
-ANDROID_API_LEVEL="${ANDROID_API_LEVEL:-34}"
-ANDROID_EMULATOR_ARCH="${ANDROID_EMULATOR_ARCH:-x86_64}"
-ANDROID_EMULATOR_DEVICE="${ANDROID_EMULATOR_DEVICE:-pixel_6}"
-ANDROID_EMULATOR_NAME="${ANDROID_EMULATOR_NAME:-maestro-ci}"
-ANDROID_EMULATOR_PORT="${ANDROID_EMULATOR_PORT:-5554}"
-ANDROID_SERIAL="emulator-${ANDROID_EMULATOR_PORT}"
-ANDROID_BOOT_TIMEOUT_SECONDS="${ANDROID_BOOT_TIMEOUT_SECONDS:-420}"
+ANDROID_API_LEVEL="${MAESTRO_ANDROID_API:-33}"
+ANDROID_TAG="${MAESTRO_ANDROID_TAG:-google_apis}"
 
-mkdir -p "$OUTPUT_DIR"
+case "$(uname -m)" in
+  arm64|aarch64)
+    ANDROID_ABI="${MAESTRO_ANDROID_ABI:-arm64-v8a}"
+    ;;
+  *)
+    ANDROID_ABI="${MAESTRO_ANDROID_ABI:-x86_64}"
+    ;;
+esac
 
-find_sdk_tool() {
-  local tool="$1"
-  local candidate
+SYSTEM_IMAGE_PACKAGE="system-images;android-${ANDROID_API_LEVEL};${ANDROID_TAG};${ANDROID_ABI}"
+DEFAULT_AVD_NAME="maestro-pixel-6-api${ANDROID_API_LEVEL}-${ANDROID_ABI}"
+PREFERRED_AVD_NAME="${MAESTRO_ANDROID_AVD:-}"
+EMULATOR_LOG="$ROOT_DIR/build/maestro/android-emulator.log"
 
-  if candidate="$(command -v "$tool" 2>/dev/null)"; then
-    echo "$candidate"
-    return 0
+export PATH="$SDK_ROOT/platform-tools:$SDK_ROOT/emulator:$SDK_ROOT/tools/bin:$PATH"
+
+require_executable() {
+  local executable_path="$1"
+  local label="$2"
+  if [[ ! -x "$executable_path" ]]; then
+    echo "$label not found at $executable_path" >&2
+    exit 1
+  fi
+}
+
+require_executable "$ADB_BIN" "adb"
+require_executable "$EMULATOR_BIN" "emulator"
+
+accept_android_licenses() {
+  if [[ ! -x "$SDKMANAGER_BIN" ]]; then
+    echo "sdkmanager is not available at $SDKMANAGER_BIN" >&2
+    exit 1
   fi
 
-  for candidate in \
-    "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/$tool" \
-    "$ANDROID_SDK_ROOT/cmdline-tools"/*/bin/"$tool" \
-    "$ANDROID_SDK_ROOT/emulator/$tool" \
-    "$ANDROID_SDK_ROOT/platform-tools/$tool"; do
-    if [[ -x "$candidate" ]]; then
-      echo "$candidate"
-      return 0
-    fi
-  done
-
-  return 1
+  printf 'y\ny\ny\ny\ny\ny\n' | "$SDKMANAGER_BIN" --licenses >/dev/null || true
 }
 
-SDKMANAGER="$(find_sdk_tool sdkmanager || true)"
-AVDMANAGER="$(find_sdk_tool avdmanager || true)"
-EMULATOR_BIN="$(find_sdk_tool emulator || true)"
-ADB_BIN="$(find_sdk_tool adb || true)"
+ensure_system_image() {
+  local system_image_dir="$SDK_ROOT/system-images/android-${ANDROID_API_LEVEL}/${ANDROID_TAG}/${ANDROID_ABI}"
+  if [[ -d "$system_image_dir" ]]; then
+    return
+  fi
 
-if [[ -z "$SDKMANAGER" || -z "$AVDMANAGER" || -z "$EMULATOR_BIN" || -z "$ADB_BIN" ]]; then
-  echo "Android SDK tools are missing under $ANDROID_SDK_ROOT." >&2
-  exit 1
-fi
-
-install_system_image() {
-  local candidate
-
-  yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
-
-  for candidate in \
-    "system-images;android-${ANDROID_API_LEVEL};google_atd;${ANDROID_EMULATOR_ARCH}" \
-    "system-images;android-${ANDROID_API_LEVEL};google_apis;${ANDROID_EMULATOR_ARCH}"; do
-    if yes | "$SDKMANAGER" --install \
-      "platform-tools" \
-      "emulator" \
-      "platforms;android-${ANDROID_API_LEVEL}" \
-      "$candidate"; then
-      echo "$candidate"
-      return 0
-    fi
-  done
-
-  echo "Failed to install a compatible Android system image." >&2
-  return 1
+  accept_android_licenses
+  "$SDKMANAGER_BIN" "platform-tools" "emulator" "$SYSTEM_IMAGE_PACKAGE"
 }
 
-wait_for_boot() {
-  local deadline boot_completed boot_anim
-  deadline=$((SECONDS + ANDROID_BOOT_TIMEOUT_SECONDS))
+create_default_avd() {
+  require_executable "$AVDMANAGER_BIN" "avdmanager"
 
-  "$ADB_BIN" start-server >/dev/null
-  "$ADB_BIN" -s "$ANDROID_SERIAL" wait-for-device
+  if "$EMULATOR_BIN" -list-avds | grep -qx "$DEFAULT_AVD_NAME"; then
+    printf '%s\n' "$DEFAULT_AVD_NAME"
+    return
+  fi
 
-  while ((SECONDS < deadline)); do
-    boot_completed="$("$ADB_BIN" -s "$ANDROID_SERIAL" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"
-    boot_anim="$("$ADB_BIN" -s "$ANDROID_SERIAL" shell getprop init.svc.bootanim 2>/dev/null | tr -d '\r')"
-
-    if [[ "$boot_completed" == "1" && "$boot_anim" == "stopped" ]]; then
-      return 0
-    fi
-
-    sleep 5
-  done
-
-  echo "Android emulator did not boot within ${ANDROID_BOOT_TIMEOUT_SECONDS}s." >&2
-  return 1
+  ensure_system_image
+  printf 'no\n' | "$AVDMANAGER_BIN" create avd --force --name "$DEFAULT_AVD_NAME" --package "$SYSTEM_IMAGE_PACKAGE" --device "pixel_6" >/dev/null
+  printf '%s\n' "$DEFAULT_AVD_NAME"
 }
 
-wait_for_package_manager() {
-  local deadline
-  deadline=$((SECONDS + 120))
+select_avd_name() {
+  if [[ -n "$PREFERRED_AVD_NAME" ]]; then
+    printf '%s\n' "$PREFERRED_AVD_NAME"
+    return
+  fi
 
-  while ((SECONDS < deadline)); do
-    if "$ADB_BIN" -s "$ANDROID_SERIAL" shell pm path android >/dev/null 2>&1; then
-      return 0
+  if "$EMULATOR_BIN" -list-avds | grep -qx 'Pixel_9a'; then
+    printf 'Pixel_9a\n'
+    return
+  fi
+
+  local first_existing_avd
+  first_existing_avd="$("$EMULATOR_BIN" -list-avds | head -n 1 || true)"
+  if [[ -n "$first_existing_avd" ]]; then
+    printf '%s\n' "$first_existing_avd"
+    return
+  fi
+
+  create_default_avd
+}
+
+wait_for_boot_completion() {
+  local device_id="$1"
+
+  "$ADB_BIN" -s "$device_id" wait-for-device
+  for _ in $(seq 1 180); do
+    local boot_completed
+    boot_completed="$("$ADB_BIN" -s "$device_id" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"
+    if [[ "$boot_completed" == "1" ]]; then
+      "$ADB_BIN" -s "$device_id" shell settings put global window_animation_scale 0 >/dev/null 2>&1 || true
+      "$ADB_BIN" -s "$device_id" shell settings put global transition_animation_scale 0 >/dev/null 2>&1 || true
+      "$ADB_BIN" -s "$device_id" shell settings put global animator_duration_scale 0 >/dev/null 2>&1 || true
+      return
     fi
     sleep 2
   done
 
-  echo "Android package manager did not become ready in time." >&2
-  return 1
+  echo "Android emulator $device_id did not finish booting." >&2
+  exit 1
 }
+
+BOOTED_DEVICE_ID="$("$ADB_BIN" devices | awk 'NR > 1 && $2 == "device" { print $1; exit }')"
+STARTED_EMULATOR=0
+EMULATOR_PID=""
 
 cleanup() {
-  "$ADB_BIN" -s "$ANDROID_SERIAL" emu kill >/dev/null 2>&1 || true
+  if [[ "$STARTED_EMULATOR" -eq 1 && -n "$BOOTED_DEVICE_ID" ]]; then
+    "$ADB_BIN" -s "$BOOTED_DEVICE_ID" emu kill >/dev/null 2>&1 || true
+  fi
+
+  if [[ -n "$EMULATOR_PID" ]]; then
+    kill "$EMULATOR_PID" >/dev/null 2>&1 || true
+  fi
 }
+
 trap cleanup EXIT
 
-SYSTEM_IMAGE_PACKAGE="$(install_system_image)"
-rm -rf "$HOME/.android/avd/${ANDROID_EMULATOR_NAME}.avd" "$HOME/.android/avd/${ANDROID_EMULATOR_NAME}.ini"
-echo "no" | "$AVDMANAGER" create avd \
-  --force \
-  --name "$ANDROID_EMULATOR_NAME" \
-  --package "$SYSTEM_IMAGE_PACKAGE" \
-  --device "$ANDROID_EMULATOR_DEVICE" >/dev/null
+if [[ -z "$BOOTED_DEVICE_ID" ]]; then
+  mkdir -p "$(dirname "$EMULATOR_LOG")"
+  AVD_NAME="$(select_avd_name)"
+  "$EMULATOR_BIN" "@$AVD_NAME" -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim >"$EMULATOR_LOG" 2>&1 &
+  EMULATOR_PID=$!
+  STARTED_EMULATOR=1
 
-: >"$EMULATOR_LOG"
-"$EMULATOR_BIN" \
-  -avd "$ANDROID_EMULATOR_NAME" \
-  -port "$ANDROID_EMULATOR_PORT" \
-  -no-window \
-  -gpu swiftshader_indirect \
-  -no-snapshot \
-  -noaudio \
-  -no-boot-anim \
-  -camera-back none \
-  -camera-front none >"$EMULATOR_LOG" 2>&1 &
+  for _ in $(seq 1 60); do
+    BOOTED_DEVICE_ID="$("$ADB_BIN" devices | awk 'NR > 1 && $2 == "device" { print $1; exit }')"
+    if [[ -n "$BOOTED_DEVICE_ID" ]]; then
+      break
+    fi
+    sleep 2
+  done
 
-wait_for_boot
-wait_for_package_manager
+  if [[ -z "$BOOTED_DEVICE_ID" ]]; then
+    echo "No Android emulator became available after launching AVD $AVD_NAME." >&2
+    exit 1
+  fi
 
-"$ADB_BIN" -s "$ANDROID_SERIAL" shell settings put global window_animation_scale 0 >/dev/null 2>&1 || true
-"$ADB_BIN" -s "$ANDROID_SERIAL" shell settings put global transition_animation_scale 0 >/dev/null 2>&1 || true
-"$ADB_BIN" -s "$ANDROID_SERIAL" shell settings put global animator_duration_scale 0 >/dev/null 2>&1 || true
-"$ADB_BIN" -s "$ANDROID_SERIAL" shell wm dismiss-keyguard >/dev/null 2>&1 || true
-"$ADB_BIN" -s "$ANDROID_SERIAL" shell input keyevent 82 >/dev/null 2>&1 || true
+  wait_for_boot_completion "$BOOTED_DEVICE_ID"
+fi
 
-cd "$ANDROID_DIR"
-./gradlew assembleDebug
-"$ADB_BIN" -s "$ANDROID_SERIAL" install -r app/build/outputs/apk/debug/app-debug.apk
+if [[ "${MAESTRO_ANDROID_SKIP_PREBUILD:-0}" != "1" ]]; then
+  (
+    cd "$REPO_DIR"
+    bun install
+    bun run build
+  )
 
+  (
+    cd "$ROOT_DIR"
+    bun install
+    bun run build
+    bun run sync:android
+    ./android/gradlew -p ./android assembleDebug
+  )
+fi
+
+APK_PATH="$ROOT_DIR/android/app/build/outputs/apk/debug/app-debug.apk"
+if [[ ! -f "$APK_PATH" ]]; then
+  echo "Android debug APK not found at $APK_PATH" >&2
+  exit 1
+fi
+
+"$ADB_BIN" -s "$BOOTED_DEVICE_ID" install -r "$APK_PATH" >/dev/null
+
+if [[ "${MAESTRO_ANDROID_PREPARE_ONLY:-0}" == "1" ]]; then
+  echo "Android emulator prepared and app installed on $BOOTED_DEVICE_ID."
+  exit 0
+fi
+
+export ANDROID_SERIAL="$BOOTED_DEVICE_ID"
 cd "$ROOT_DIR"
-export ANDROID_SERIAL
-bun run maestro:android
+exec ./scripts/run-maestro-android.sh
