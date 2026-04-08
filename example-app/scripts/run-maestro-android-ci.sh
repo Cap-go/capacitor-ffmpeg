@@ -5,10 +5,35 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 REPO_DIR="$(cd "$ROOT_DIR/.." && pwd)"
 
 SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-$HOME/Library/Android/sdk}}"
-ADB_BIN="${ADB_BIN:-$SDK_ROOT/platform-tools/adb}"
-EMULATOR_BIN="${EMULATOR_BIN:-$SDK_ROOT/emulator/emulator}"
-SDKMANAGER_BIN="${SDKMANAGER_BIN:-$SDK_ROOT/tools/bin/sdkmanager}"
-AVDMANAGER_BIN="${AVDMANAGER_BIN:-$SDK_ROOT/tools/bin/avdmanager}"
+
+find_sdk_tool() {
+  local tool="$1"
+  local candidate
+
+  if candidate="$(command -v "$tool" 2>/dev/null)"; then
+    printf '%s\n' "$candidate"
+    return 0
+  fi
+
+  for candidate in \
+    "$SDK_ROOT/cmdline-tools/latest/bin/$tool" \
+    "$SDK_ROOT/cmdline-tools"/*/bin/"$tool" \
+    "$SDK_ROOT/tools/bin/$tool" \
+    "$SDK_ROOT/emulator/$tool" \
+    "$SDK_ROOT/platform-tools/$tool"; do
+    if [[ -x "$candidate" ]]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+ADB_BIN="${ADB_BIN:-$(find_sdk_tool adb)}"
+EMULATOR_BIN="${EMULATOR_BIN:-$(find_sdk_tool emulator)}"
+SDKMANAGER_BIN="${SDKMANAGER_BIN:-$(find_sdk_tool sdkmanager)}"
+AVDMANAGER_BIN="${AVDMANAGER_BIN:-$(find_sdk_tool avdmanager)}"
 
 ANDROID_API_LEVEL="${MAESTRO_ANDROID_API:-33}"
 ANDROID_TAG="${MAESTRO_ANDROID_TAG:-google_apis}"
