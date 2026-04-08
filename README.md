@@ -218,12 +218,12 @@ Get the plugin package version reported by the current platform implementation.
 
 #### ConvertImageOptions
 
-| Prop             | Type                                                            |
-| ---------------- | --------------------------------------------------------------- |
-| **`inputPath`**  | <code>string</code>                                             |
-| **`outputPath`** | <code>string</code>                                             |
-| **`format`**     | <code><a href="#imageoutputformat">ImageOutputFormat</a></code> |
-| **`quality`**    | <code>number</code>                                             |
+| Prop             | Type                                                            | Description                                                                                               |
+| ---------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| **`inputPath`**  | <code>string</code>                                             |                                                                                                           |
+| **`outputPath`** | <code>string</code>                                             |                                                                                                           |
+| **`format`**     | <code><a href="#imageoutputformat">ImageOutputFormat</a></code> |                                                                                                           |
+| **`quality`**    | <code>number</code>                                             | Compression quality in the inclusive range `0.0..1.0`. Native platforms reject values outside that range. |
 
 #### PluginListenerHandle
 

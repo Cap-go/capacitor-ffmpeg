@@ -66,6 +66,7 @@ jobs:
   maestro_android:
     timeout-minutes: 60
     runs-on: ubuntu-latest
+    needs: [web, build_android, build_ios, guard_swiftpm_version]
     steps:
       - name: Check out
         uses: actions/checkout@v6
@@ -90,6 +91,7 @@ jobs:
           java-version: '21'
       - name: Install Maestro CLI
         run: |
+          export MAESTRO_VERSION=2.4.0
           curl -Ls "https://get.maestro.mobile.dev" | bash
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
       - name: Run Android Maestro flows
@@ -119,6 +121,7 @@ jobs:
   maestro_ios:
     timeout-minutes: 60
     runs-on: macOS-latest
+    needs: [web, build_android, build_ios, guard_swiftpm_version]
     steps:
       - name: Check out
         uses: actions/checkout@v6
@@ -143,12 +146,17 @@ jobs:
           java-version: '21'
       - name: Install Maestro CLI
         run: |
+          export MAESTRO_VERSION=2.4.0
           curl -Ls "https://get.maestro.mobile.dev" | bash
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
       - name: Start iOS simulator
         run: |
           maestro start-device --platform ios --os-version 18
           BOOTED_SIMULATOR_ID=$(xcrun simctl list devices booted | awk -F '[()]' '/Booted/ { print $2; exit }')
+          if [[ -z "$BOOTED_SIMULATOR_ID" ]]; then
+            echo "No booted simulator found after maestro start-device." >&2
+            exit 1
+          fi
           echo "BOOTED_SIMULATOR_ID=$BOOTED_SIMULATOR_ID" >> "$GITHUB_ENV"
       - name: Build and install iOS example app
         run: |

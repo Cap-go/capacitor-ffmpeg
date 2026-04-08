@@ -47,6 +47,11 @@ export interface ConvertImageOptions {
   inputPath: string;
   outputPath: string;
   format: ImageOutputFormat;
+  /**
+   * Compression quality in the inclusive range `0.0..1.0`.
+   *
+   * Native platforms reject values outside that range.
+   */
   quality?: number;
 }
 
