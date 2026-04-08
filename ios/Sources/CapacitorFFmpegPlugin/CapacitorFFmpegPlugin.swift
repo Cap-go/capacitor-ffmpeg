@@ -7,7 +7,6 @@ import Capacitor
  */
 @objc(CapacitorFFmpegPlugin)
 public class CapacitorFFmpegPlugin: CAPPlugin, CAPBridgedPlugin {
-    private let pluginVersion: String = "0.0.8"
     public let identifier = "CapacitorFFmpegPlugin"
     public let jsName = "CapacitorFFmpeg"
     public let pluginMethods: [CAPPluginMethod] = [
@@ -50,11 +49,11 @@ public class CapacitorFFmpegPlugin: CAPPlugin, CAPBridgedPlugin {
 
         do {
             guard height > 0 && height <= Int32.max else {
-                call.reject("Height must be between 0 and \(Int32.max)", "INVALID_ARGUMENT")
+                call.reject("Height must be between 1 and \(Int32.max)", "INVALID_ARGUMENT")
                 return
             }
             guard width > 0 && width <= Int32.max else {
-                call.reject("Width must be between 0 and \(Int32.max)", "INVALID_ARGUMENT")
+                call.reject("Width must be between 1 and \(Int32.max)", "INVALID_ARGUMENT")
                 return
             }
             guard bitrate >= 0 else {
@@ -110,7 +109,7 @@ public class CapacitorFFmpegPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     @objc func getPluginVersion(_ call: CAPPluginCall) {
-        call.resolve(["version": self.pluginVersion])
+        call.resolve(["version": CapacitorFFmpegPluginVersion.value])
     }
 
     @objc func getCapabilities(_ call: CAPPluginCall) {

@@ -9,6 +9,7 @@ import type {
   PluginVersionResult,
   ReencodeVideoOptions,
 } from './definitions';
+import { PLUGIN_VERSION } from './pluginVersion';
 
 export class CapacitorFFmpegWeb extends WebPlugin implements CapacitorFFmpegPlugin {
   async getCapabilities(): Promise<FFmpegCapabilitiesResult> {
@@ -53,7 +54,7 @@ export class CapacitorFFmpegWeb extends WebPlugin implements CapacitorFFmpegPlug
     };
   }
 
-  async reencodeVideo(options: ReencodeVideoOptions): Promise<void | FFmpegAcceptedJob> {
+  async reencodeVideo(options: ReencodeVideoOptions): Promise<FFmpegAcceptedJob> {
     void options;
     throw this.unimplemented('reencodeVideo is currently only available on iOS.');
   }
@@ -64,6 +65,6 @@ export class CapacitorFFmpegWeb extends WebPlugin implements CapacitorFFmpegPlug
   }
 
   async getPluginVersion(): Promise<PluginVersionResult> {
-    return { version: 'web' };
+    return { version: PLUGIN_VERSION };
   }
 }

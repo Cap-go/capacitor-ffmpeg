@@ -62,6 +62,9 @@ export interface ConvertImageResult {
 
 export interface FFmpegProgressEvent {
   jobId: string;
+  /**
+   * Normalized progress as a floating-point value in the inclusive range `0.0..1.0`.
+   */
   progress: number;
   state: FFmpegProgressState;
   message?: string;
@@ -90,7 +93,7 @@ export interface CapacitorFFmpegPlugin extends Plugin {
    *
    * Android and web currently reject with `UNIMPLEMENTED`.
    */
-  reencodeVideo(options: ReencodeVideoOptions): Promise<void | FFmpegAcceptedJob>;
+  reencodeVideo(options: ReencodeVideoOptions): Promise<FFmpegAcceptedJob>;
 
   /**
    * Convert a still image into another format.
@@ -107,10 +110,9 @@ export interface CapacitorFFmpegPlugin extends Plugin {
   addListener(eventName: 'progress', listenerFunc: (event: FFmpegProgressEvent) => void): Promise<PluginListenerHandle>;
 
   /**
-   * Get the native Capacitor plugin version
+   * Get the plugin package version reported by the current platform implementation.
    *
-   * @returns {Promise<{ version: string }>} a promise with the native plugin version for this device
-   * @throws An error if something went wrong
+   * @returns {Promise<PluginVersionResult>}
    */
   getPluginVersion(): Promise<PluginVersionResult>;
 }

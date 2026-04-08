@@ -62,7 +62,7 @@ jobs:
         run: bun run check:wiring
       - name: Build
         id: build_code
-        run: bun run verify:ios
+        run: bun run verify:ios && bun run test:macos
   maestro_android:
     timeout-minutes: 60
     runs-on: ubuntu-latest

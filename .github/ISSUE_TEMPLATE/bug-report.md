@@ -11,7 +11,7 @@ assignees: ''
 ### Capacitor Version
 
 <!--
-Paste the output from the `npx cap doctor` command into the code block below. This will provide the versions of Capacitor packages and related dependencies.
+Paste the output from the `bunx cap doctor` command into the code block below. This will provide the versions of Capacitor packages and related dependencies.
 -->
 
 ```
@@ -21,7 +21,7 @@ PASTE OUTPUT HERE
 ### Plugin Version
 
 <!--
-Paste the output from the `npx @capgo/cli@latest doctor` command into the code block below. This will provide the versions of Capacitor updater package.
+Paste the output from the `bunx @capgo/cli@latest doctor` command into the code block below. This will provide the versions of Capacitor updater package.
 -->
 
 ```
@@ -31,7 +31,7 @@ PASTE OUTPUT HERE
 ### context(s)
 
 <!--
-Please change the value acording to your context
+Please change the value according to your context
 -->
 
 ```md

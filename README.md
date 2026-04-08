@@ -50,7 +50,7 @@ bunx cap sync
 | Capability         | iOS             | Android | Web | Notes                                                                                                       |
 | ------------------ | --------------- | ------- | --- | ----------------------------------------------------------------------------------------------------------- |
 | `getCapabilities`  | ✅              | ✅      | ✅  | Returns the runtime capability matrix so apps can check what is actually usable on the current platform.    |
-| `getPluginVersion` | ✅              | ✅      | ✅  | Web returns `"web"` as a platform marker.                                                                   |
+| `getPluginVersion` | ✅              | ✅      | ✅  | Returns a `{ version }` payload on every platform; use `getCapabilities().platform` for platform detection. |
 | `reencodeVideo`    | ⚠️ Experimental | ❌      | ❌  | iOS accepts a queued job and reports lifecycle via `progress`; Android and web reject with `UNIMPLEMENTED`. |
 | `convertImage`     | ✅              | ✅      | ❌  | iOS converts still images to `jpeg` or `png`; Android converts to `webp`, `jpeg`, or `png`; web rejects.    |
 
@@ -94,7 +94,7 @@ Return the machine-readable capability matrix for the current platform.
 ### reencodeVideo(...)
 
 ```typescript
-reencodeVideo(options: ReencodeVideoOptions) => Promise<void | FFmpegAcceptedJob>
+reencodeVideo(options: ReencodeVideoOptions) => Promise<FFmpegAcceptedJob>
 ```
 
 Queue a video re-encode job.
@@ -108,7 +108,7 @@ Android and web currently reject with `UNIMPLEMENTED`.
 | ------------- | --------------------------------------------------------------------- |
 | **`options`** | <code><a href="#reencodevideooptions">ReencodeVideoOptions</a></code> |
 
-**Returns:** <code>Promise&lt;void | <a href="#ffmpegacceptedjob">FFmpegAcceptedJob</a>&gt;</code>
+**Returns:** <code>Promise&lt;<a href="#ffmpegacceptedjob">FFmpegAcceptedJob</a>&gt;</code>
 
 ---
 
@@ -155,7 +155,7 @@ Listen for media job progress.
 getPluginVersion() => Promise<PluginVersionResult>
 ```
 
-Get the native Capacitor plugin version
+Get the plugin package version reported by the current platform implementation.
 
 **Returns:** <code>Promise&lt;<a href="#pluginversionresult">PluginVersionResult</a>&gt;</code>
 
@@ -233,14 +233,14 @@ Get the native Capacitor plugin version
 
 #### FFmpegProgressEvent
 
-| Prop             | Type                                                                | Description                                                           |
-| ---------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| **`jobId`**      | <code>string</code>                                                 |                                                                       |
-| **`progress`**   | <code>number</code>                                                 |                                                                       |
-| **`state`**      | <code><a href="#ffmpegprogressstate">FFmpegProgressState</a></code> |                                                                       |
-| **`message`**    | <code>string</code>                                                 |                                                                       |
-| **`outputPath`** | <code>string</code>                                                 |                                                                       |
-| **`fileId`**     | <code>string</code>                                                 | Legacy alias kept for compatibility while callers migrate to `jobId`. |
+| Prop             | Type                                                                | Description                                                                      |
+| ---------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| **`jobId`**      | <code>string</code>                                                 |                                                                                  |
+| **`progress`**   | <code>number</code>                                                 | Normalized progress as a floating-point value in the inclusive range `0.0..1.0`. |
+| **`state`**      | <code><a href="#ffmpegprogressstate">FFmpegProgressState</a></code> |                                                                                  |
+| **`message`**    | <code>string</code>                                                 |                                                                                  |
+| **`outputPath`** | <code>string</code>                                                 |                                                                                  |
+| **`fileId`**     | <code>string</code>                                                 | Legacy alias kept for compatibility while callers migrate to `jobId`.            |
 
 #### PluginVersionResult
 

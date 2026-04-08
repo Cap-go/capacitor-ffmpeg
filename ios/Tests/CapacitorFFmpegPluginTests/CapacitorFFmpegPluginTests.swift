@@ -79,6 +79,7 @@ final class CapacitorFFmpegPluginTests: XCTestCase {
 
         XCTAssertEqual(payload.asDictionary["jobId"] as? String, "job-123")
         XCTAssertEqual(payload.asDictionary["fileId"] as? String, "job-123")
+        XCTAssertEqual(payload.asDictionary["progress"] as? Double, 0.5)
         XCTAssertEqual(payload.asDictionary["state"] as? String, "running")
         XCTAssertEqual(payload.asDictionary["message"] as? String, "Re-encoding video...")
         XCTAssertEqual(payload.asDictionary["outputPath"] as? String, "file:///output.mp4")

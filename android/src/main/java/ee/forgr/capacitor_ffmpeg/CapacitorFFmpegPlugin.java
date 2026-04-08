@@ -133,7 +133,7 @@ public class CapacitorFFmpegPlugin extends Plugin {
     }
 
     String getPluginVersionValue() {
-        return CapacitorFFmpegPluginContract.PLUGIN_VERSION;
+        return BuildConfig.CAPACITOR_FFMPEG_PLUGIN_VERSION;
     }
 
     String getPlatformName() {

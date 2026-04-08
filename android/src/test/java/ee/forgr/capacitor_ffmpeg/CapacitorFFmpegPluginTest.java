@@ -3,10 +3,14 @@ package ee.forgr.capacitor_ffmpeg;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
+import com.getcapacitor.JSObject;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import java.io.File;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.robolectric.RobolectricTestRunner;
 
+@RunWith(RobolectricTestRunner.class)
 public class CapacitorFFmpegPluginTest {
 
     @Test
@@ -21,7 +25,7 @@ public class CapacitorFFmpegPluginTest {
     public void versionValueUsesTheSharedContractVersion() {
         final CapacitorFFmpegPlugin plugin = new CapacitorFFmpegPlugin();
 
-        assertEquals(CapacitorFFmpegPluginContract.PLUGIN_VERSION, plugin.getPluginVersionValue());
+        assertEquals(BuildConfig.CAPACITOR_FFMPEG_PLUGIN_VERSION, plugin.getPluginVersionValue());
     }
 
     @Test
@@ -44,6 +48,18 @@ public class CapacitorFFmpegPluginTest {
             "Still-image conversion is available on Android for webp, jpeg, and png outputs.",
             plugin.getCapabilityReason("convertImage")
         );
+    }
+
+    @Test
+    public void capabilitiesPayloadExposesTheJsVisibleContract() throws Exception {
+        final CapacitorFFmpegPlugin plugin = new CapacitorFFmpegPlugin();
+        final JSObject payload = plugin.createCapabilitiesPayload();
+        final var features = payload.getJSONObject("features");
+
+        assertEquals("android", payload.getString("platform"));
+        assertEquals("available", features.getJSONObject("getCapabilities").getString("status"));
+        assertEquals("unimplemented", features.getJSONObject("reencodeVideo").getString("status"));
+        assertEquals("reencodeVideo is currently only available on iOS.", features.getJSONObject("reencodeVideo").getString("reason"));
     }
 
     @Test

@@ -33,6 +33,7 @@
   ],
   "scripts": {
     "test": "bun run test:web && bun run test:android",
+    "test:macos": "bun run test:web && bun run test:ios",
     "test:web": "bun test",
     "test:android": "cd android && ./gradlew test",
     "test:ios": "xcodebuild -scheme CapgoCapacitorFfmpeg -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest' test",
@@ -46,7 +47,8 @@
     "prettier": "prettier-pretty-check \"**/*.{css,html,md,ts,js,mjs,java,json}\" --plugin=prettier-plugin-java",
     "swiftlint": "node-swiftlint",
     "docgen": "docgen --api CapacitorFFmpegPlugin --output-readme README.md --output-json dist/docs.json",
-    "build": "bun run clean && bun run docgen && tsc && rollup -c rollup.config.mjs",
+    "sync:version": "bun scripts/sync-plugin-version.mjs",
+    "build": "bun run clean && bun run sync:version && bun run docgen && tsc && rollup -c rollup.config.mjs",
     "clean": "rimraf ./dist",
     "watch": "tsc --watch",
     "prepublishOnly": "bun run build",

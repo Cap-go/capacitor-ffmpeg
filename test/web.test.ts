@@ -1,13 +1,14 @@
 import { ExceptionCode } from '@capacitor/core';
 import { describe, expect, it } from 'bun:test';
 
+import { PLUGIN_VERSION } from '../src/pluginVersion';
 import { CapacitorFFmpegWeb } from '../src/web';
 
 describe('CapacitorFFmpegWeb', () => {
-  it('returns the web plugin version marker', async () => {
+  it('returns the shared plugin version on web', async () => {
     const plugin = new CapacitorFFmpegWeb();
 
-    await expect(plugin.getPluginVersion()).resolves.toEqual({ version: 'web' });
+    await expect(plugin.getPluginVersion()).resolves.toEqual({ version: PLUGIN_VERSION });
   });
 
   it('describes the current web capability matrix', async () => {
