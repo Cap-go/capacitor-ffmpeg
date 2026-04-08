@@ -153,6 +153,7 @@ final class CapacitorFFmpegPluginTests: XCTestCase {
         }
 
         try XCTUnwrap(image.pngData()).write(to: inputURL)
+        try Data("stale".utf8).write(to: outputURL)
 
         let result = try CapacitorFFmpeg().convertImage(
             inputPath: inputURL.path,

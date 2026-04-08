@@ -430,16 +430,19 @@ private final class SelfForReencodeVideo {
         }
 
         let outputDirectory = outputURL.deletingLastPathComponent()
-        try FileManager.default.createDirectory(
+        let fileManager = FileManager.default
+        try fileManager.createDirectory(
             at: outputDirectory,
             withIntermediateDirectories: true
         )
-
-        if FileManager.default.fileExists(atPath: outputURL.path) {
-            try FileManager.default.removeItem(at: outputURL)
+        let temporaryOutputURL = outputDirectory
+            .appendingPathComponent(".ffmpeg-convert-\(UUID().uuidString)")
+            .appendingPathExtension(outputURL.pathExtension.isEmpty ? "tmp" : outputURL.pathExtension)
+        defer {
+            try? fileManager.removeItem(at: temporaryOutputURL)
         }
 
-        guard let destination = CGImageDestinationCreateWithURL(outputURL as CFURL, destinationType, 1, nil) else {
+        guard let destination = CGImageDestinationCreateWithURL(temporaryOutputURL as CFURL, destinationType, 1, nil) else {
             throw FFmpegError.reencodingFailed("Could not create the output image container.")
         }
 
@@ -452,6 +455,12 @@ private final class SelfForReencodeVideo {
 
         guard CGImageDestinationFinalize(destination) else {
             throw FFmpegError.reencodingFailed("The converted image could not be finalized.")
+        }
+
+        if fileManager.fileExists(atPath: outputURL.path) {
+            _ = try fileManager.replaceItemAt(outputURL, withItemAt: temporaryOutputURL)
+        } else {
+            try fileManager.moveItem(at: temporaryOutputURL, to: outputURL)
         }
 
         return FFmpegConvertedImage(

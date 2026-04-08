@@ -1204,6 +1204,8 @@ export function createExampleApp({
     const file = refs.videoPickerInput.files?.[0];
     try {
       await handleVideoPicked(file);
+    } catch (error) {
+      pushLog('error', `Failed to pick video: ${normalizeErrorMessage(error)}`);
     } finally {
       refs.videoPickerInput.value = '';
     }
@@ -1233,6 +1235,8 @@ export function createExampleApp({
     const file = refs.imagePickerInput.files?.[0];
     try {
       await handleImagePicked(file);
+    } catch (error) {
+      pushLog('error', `Failed to pick image: ${normalizeErrorMessage(error)}`);
     } finally {
       refs.imagePickerInput.value = '';
     }

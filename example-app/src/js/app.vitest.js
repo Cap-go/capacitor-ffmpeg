@@ -40,10 +40,6 @@ function createCapabilities(platform, overrides = {}) {
   };
 }
 
-function flushPromises() {
-  return new Promise((resolve) => setTimeout(resolve, 0));
-}
-
 function mountApp({ ffmpeg, filesystem, now = () => 1700000000000 } = {}) {
   document.body.innerHTML = '<div id="root"></div>';
   const root = document.querySelector('#root');

@@ -181,9 +181,13 @@ public class CapacitorFFmpegPlugin extends Plugin {
 
         final String trimmedPath = rawPath.trim();
         if (trimmedPath.startsWith("file://")) {
-            final URI uri = URI.create(trimmedPath);
-            if (uri.getPath() != null && !uri.getPath().isEmpty()) {
-                return new File(uri.getPath());
+            try {
+                final URI uri = URI.create(trimmedPath);
+                if (uri.getPath() != null && !uri.getPath().isEmpty()) {
+                    return new File(uri.getPath());
+                }
+            } catch (final IllegalArgumentException ignored) {
+                // Fall back to treating malformed file:// inputs as raw file paths.
             }
         }
 

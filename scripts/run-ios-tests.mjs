@@ -1,4 +1,7 @@
 import { execFileSync, spawnSync } from 'node:child_process';
+import { mkdtempSync, rmSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 const scheme = 'CapgoCapacitorFfmpeg';
 
@@ -69,7 +72,14 @@ function resolveDestination() {
 }
 
 const destination = resolveDestination();
-const result = spawnSync('xcodebuild', ['-scheme', scheme, '-destination', destination, 'test'], { stdio: 'inherit' });
+const derivedDataPath = mkdtempSync(path.join(os.tmpdir(), 'capgo-capacitor-ffmpeg-tests-'));
+const result = spawnSync(
+  'xcodebuild',
+  ['-scheme', scheme, '-destination', destination, '-derivedDataPath', derivedDataPath, 'test'],
+  { stdio: 'inherit' },
+);
+
+rmSync(derivedDataPath, { recursive: true, force: true });
 
 if (result.error) {
   throw result.error;

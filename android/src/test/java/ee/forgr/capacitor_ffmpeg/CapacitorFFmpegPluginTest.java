@@ -77,8 +77,10 @@ public class CapacitorFFmpegPluginTest {
         final CapacitorFFmpegPlugin plugin = new CapacitorFFmpegPlugin();
         final File rawPath = plugin.resolveFilesystemPath("/tmp/input.png");
         final File fileUriPath = plugin.resolveFilesystemPath("file:///tmp/output.webp");
+        final File malformedFileUriPath = plugin.resolveFilesystemPath("file://%zz");
 
         assertEquals("/tmp/input.png", rawPath.getPath());
         assertEquals("/tmp/output.webp", fileUriPath.getPath());
+        assertEquals("file:/%zz", malformedFileUriPath.getPath());
     }
 }
