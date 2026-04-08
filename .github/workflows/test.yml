@@ -52,7 +52,7 @@ jobs:
         with:
           submodules: recursive
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@1.90.0
       - uses: oven-sh/setup-bun@v2
       - name: Install dependencies
         id: install_code
@@ -95,6 +95,8 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '21'
+      - name: Build Android debug APK
+        run: ./example-app/android/gradlew -p ./example-app/android assembleDebug
       - name: Enable KVM access
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -116,7 +118,6 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none -camera-front none
           disable-animations: true
           script: |
-            ./example-app/android/gradlew -p ./example-app/android assembleDebug
             adb install -r example-app/android/app/build/outputs/apk/debug/app-debug.apk
             cd example-app && bun run maestro:android
       - name: Upload Android Maestro artifacts
