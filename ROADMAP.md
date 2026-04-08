@@ -1,16 +1,16 @@
 # Capacitor FFmpeg Roadmap
 
-Last updated: 2026-04-03
+Last updated: 2026-04-04
 Status: active planning
 
 ## Why this file exists
 
 This plugin is currently much smaller than FFmpeg itself:
 
-- The TypeScript API exposes `getCapabilities()`, `reencodeVideo()`, a `progress` event, and `getPluginVersion()`.
+- The TypeScript API exposes `getCapabilities()`, `reencodeVideo()`, `convertImage()`, a `progress` event, and `getPluginVersion()`.
 - The Rust core currently focuses on one video re-encode path: decode video, encode H.264, and copy non-video streams.
 - iOS has the only real native media implementation today.
-- Android only exposes `getPluginVersion()`.
+- Android exposes `getPluginVersion()`, `getCapabilities()`, and `convertImage()`.
 - Web is a stub.
 - The test suite now covers basic wrapper contracts, but not media regressions yet.
 
@@ -254,3 +254,4 @@ When updating:
 - 2026-04-03: Completed M0 by switching package scripts to Bun, replacing template tests with contract tests, documenting fixture policy, and adding a README support matrix.
 - 2026-04-03: Completed M1 with a typed JS contract, explicit unsupported-platform behavior, a published feature matrix, and an upstream-inspired test inventory; started M2 by moving iOS re-encode onto a queued wrapper contract without the previous hardcoded BackgroundTasks path.
 - 2026-04-03: Added `getCapabilities()` so the current plugin scope is machine-readable on iOS, Android, and web, and aligned the docs around runtime feature gating.
+- 2026-04-04: Replaced the placeholder example app with an FFmpeg capability playground, removed the broken Camera Preview path from the SwiftPM-based example app, added picker-backed video staging plus native iOS image conversion, and expanded Vitest coverage for the example app's runtime diagnostics and media flows.

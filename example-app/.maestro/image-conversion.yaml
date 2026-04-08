@@ -1,0 +1,26 @@
+appId: app.capgo.ffmpeg
+name: Convert image from picker
+---
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "FFmpeg capability playground"
+    timeout: 30000
+- tapOn: "Load demo image"
+- extendedWaitUntil:
+    visible:
+      text: "sample-image.png staged in the app cache."
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      text: "Convert image"
+    direction: DOWN
+    timeout: 10000
+- tapOn: "Convert image"
+- extendedWaitUntil:
+    visible:
+      text: "Converted .* to (jpeg|webp).*"
+    timeout: 30000
+- assertVisible:
+    text: "Converted .* to (jpeg|webp).*"
+- takeScreenshot: "image-conversion-complete"

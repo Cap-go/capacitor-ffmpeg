@@ -1,20 +1,23 @@
 # Test Inventory
 
-Last updated: 2026-04-03
+Last updated: 2026-04-04
 
 This file maps the public plugin contract to the tests that exist now and the next regression coverage we still need.
 
 ## Current inventory
 
-| Surface                              | Upstream-inspired category             | Current coverage                                      | Next missing coverage                                                                 |
-| ------------------------------------ | -------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `getCapabilities`                    | Plugin-only scope introspection        | Web contract test, Android unit test, iOS helper test | Add JS integration test against the registered plugin surface                         |
-| `getPluginVersion`                   | Wrapper contract, no FFmpeg equivalent | Web contract test, Android unit test                  | iOS plugin wrapper test                                                               |
-| `reencodeVideo` unsupported behavior | Plugin-only contract                   | Web contract test, Android unit test helper           | None for current scope                                                                |
-| `reencodeVideo` acceptance result    | Plugin job contract                    | iOS helper tests for queued job payload               | iOS plugin wrapper test                                                               |
-| `progress` event payload             | Plugin job/progress contract           | iOS helper tests                                      | End-to-end event assertion during a real encode                                       |
-| `reencodeVideo` media pipeline       | FATE-adjacent video encode + mux path  | Not yet covered by fixture tests                      | Add generated MP4 fixture, assert output metadata and duration tolerance              |
-| Invalid media input handling         | FATE-style negative regression         | Not yet covered                                       | Add broken fixture and assert `TRANSCODE_FAILED` or structured failure progress event |
+| Surface                              | Upstream-inspired category             | Current coverage                                                                                                  | Next missing coverage                                                                      |
+| ------------------------------------ | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `getCapabilities`                    | Plugin-only scope introspection        | Web contract test, Android unit test, iOS helper test                                                             | Add JS integration test against the registered plugin surface                              |
+| `getPluginVersion`                   | Wrapper contract, no FFmpeg equivalent | Web contract test, Android unit test                                                                              | iOS plugin wrapper test                                                                    |
+| `reencodeVideo` unsupported behavior | Plugin-only contract                   | Web contract test, Android unit test helper                                                                       | None for current scope                                                                     |
+| `convertImage` unsupported behavior  | Plugin-only contract                   | Web contract test                                                                                                 | None for current scope                                                                     |
+| `convertImage` native execution      | Still-image transcode                  | Android unit test helper, iOS native test for fixture generation and output write, Maestro Android+iOS flows      | Add wrapper-level test with `CAPPluginCall` and output file metadata validation            |
+| `reencodeVideo` acceptance result    | Plugin job contract                    | iOS helper tests for queued job payload                                                                           | iOS plugin wrapper test                                                                    |
+| `progress` event payload             | Plugin job/progress contract           | iOS helper tests                                                                                                  | End-to-end event assertion during a real encode                                            |
+| Example app runtime harness          | App-level contract smoke               | Vitest example-app checks plus Maestro iOS/Android flows for runtime checks, image conversion, and iOS video flow | Add native device smoke flow: pick arbitrary gallery media -> transcode -> verify metadata |
+| `reencodeVideo` media pipeline       | FATE-adjacent video encode + mux path  | Not yet covered by fixture tests                                                                                  | Add generated MP4 fixture, assert output metadata and duration tolerance                   |
+| Invalid media input handling         | FATE-style negative regression         | Not yet covered                                                                                                   | Add broken fixture and assert `TRANSCODE_FAILED` or structured failure progress event      |
 
 ## FATE-inspired mapping
 
@@ -31,11 +34,11 @@ We are not importing upstream FATE directly. We are using it as a taxonomy:
 
 ## CI tiers
 
-| Tier      | Purpose                                                            | Current status |
-| --------- | ------------------------------------------------------------------ | -------------- |
-| PR        | Contract tests, type/build verification, small wrapper regressions | Active         |
-| Scheduled | Heavier media fixtures and broader codec/container matrix          | Planned        |
-| Release   | Platform verification plus example-app smoke paths                 | Planned        |
+| Tier      | Purpose                                                                                       | Current status |
+| --------- | --------------------------------------------------------------------------------------------- | -------------- |
+| PR        | Contract tests, type/build verification, wrapper regressions, Maestro example-app smoke flows | Active         |
+| Scheduled | Heavier media fixtures and broader codec/container matrix                                     | Planned        |
+| Release   | Platform verification plus example-app smoke paths                                            | Planned        |
 
 ## Immediate next media tests
 

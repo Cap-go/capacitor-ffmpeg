@@ -1,7 +1,10 @@
 use anyhow::{Result, Context, bail};
 use ffmpeg_next::format;
 use ffmpeg_next::media;
+use ffmpeg_next::Codec;
 use ffmpeg_next::{codec, decoder, encoder, frame, picture, Dictionary, Packet, Rational};
+use ffmpeg_next::software::scaling::{context::Context as ScalingContext, flag::Flags as ScalingFlags};
+use ffmpeg_next::util::format::Pixel;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
@@ -250,6 +253,7 @@ struct Transcoder {
     decoder: decoder::Video,
     input_time_base: Rational,
     encoder: encoder::Video,
+    scaler: ScalingContext,
     frame_count: usize,
     starting_time: Instant,
     frames: i64,
@@ -258,6 +262,33 @@ struct Transcoder {
 }
 
 impl Transcoder {
+    fn select_output_pixel_format(codec: Codec, decoder_format: Pixel) -> Pixel {
+        let supported_formats: Vec<Pixel> = codec
+            .video()
+            .ok()
+            .and_then(|video| video.formats().map(|formats| formats.collect()))
+            .unwrap_or_default();
+
+        for candidate in [Pixel::YUV420P, Pixel::NV12, decoder_format] {
+            if supported_formats.is_empty() || supported_formats.contains(&candidate) {
+                eprintln!(
+                    "Using H.264 output pixel format {:?}; supported formats: {:?}",
+                    candidate,
+                    supported_formats
+                );
+                return candidate;
+            }
+        }
+
+        let fallback = supported_formats.first().copied().unwrap_or(decoder_format);
+        eprintln!(
+            "Using fallback H.264 output pixel format {:?}; supported formats: {:?}",
+            fallback,
+            supported_formats
+        );
+        fallback
+    }
+
     fn new(
         ist: &format::stream::Stream,
         octx: &mut format::context::Output,
@@ -273,13 +304,23 @@ impl Transcoder {
         let decoder = ffmpeg_next::codec::context::Context::from_parameters(ist.parameters())?
             .decoder()
             .video()?;
+        let codec = encoder::find(codec::Id::H264).ok_or(ffmpeg_next::Error::EncoderNotFound)?;
+        let output_format = Self::select_output_pixel_format(codec, decoder.format());
+        let scaler = ScalingContext::get(
+            decoder.format(),
+            decoder.width(),
+            decoder.height(),
+            output_format,
+            target_width,
+            target_height,
+            ScalingFlags::BILINEAR,
+        )?;
 
         let frames = ist.frames();
-        let codec = encoder::find(codec::Id::H264);
         let mut ost = octx.add_stream(codec)?;
 
         let mut encoder =
-            codec::context::Context::new_with_codec(codec.ok_or(ffmpeg_next::Error::InvalidData)?)
+            codec::context::Context::new_with_codec(codec)
                 .encoder()
                 .video()?;
         ost.set_parameters(&encoder);
@@ -288,7 +329,7 @@ impl Transcoder {
         encoder.set_height(target_height);
         encoder.set_width(target_width);
         encoder.set_aspect_ratio(decoder.aspect_ratio());
-        encoder.set_format(decoder.format());
+        encoder.set_format(output_format);
         encoder.set_frame_rate(decoder.frame_rate());
         encoder.set_time_base(ist.time_base());
         
@@ -307,6 +348,7 @@ impl Transcoder {
             decoder,
             input_time_base: ist.time_base(),
             encoder: opened_encoder,
+            scaler,
             frame_count: 0,
             starting_time: Instant::now(),
             frames,
@@ -343,7 +385,7 @@ impl Transcoder {
             let frame_count = self.frame_count.clone();
             let frames = self.frames.clone();
 
-            if (self.should_inform_about_progress) {
+            if self.should_inform_about_progress {
 
                 // We used to do tokio::spawn here, but this isn't really acceptable
                 // As this code isn't thread safe, and in swift, we pass a pointer to the task into rust, it might get deallocated before the task is completed
@@ -365,9 +407,13 @@ impl Transcoder {
             }
 
 
-            frame.set_pts(timestamp);
-            frame.set_kind(picture::Type::None);
-            self.send_frame_to_encoder(&frame)?;
+            let mut scaled_frame = frame::Video::empty();
+            self.scaler
+                .run(&frame, &mut scaled_frame)
+                .context("Failed to scale decoded frame")?;
+            scaled_frame.set_pts(timestamp);
+            scaled_frame.set_kind(picture::Type::None);
+            self.send_frame_to_encoder(&scaled_frame)?;
             self.receive_and_process_encoded_packets(octx, ost_time_base)?;
         }
         Ok(())
@@ -375,7 +421,18 @@ impl Transcoder {
 
     fn send_frame_to_encoder(&mut self, frame: &frame::Video) -> Result<()> {
         self.encoder.send_frame(frame)
-            .context("Failed to send frame to encoder")?;
+            .with_context(|| {
+                format!(
+                    "Failed to send frame to encoder (frame {}x{} {:?}, encoder {}x{} {:?}, pts {:?})",
+                    frame.width(),
+                    frame.height(),
+                    frame.format(),
+                    self.encoder.width(),
+                    self.encoder.height(),
+                    self.encoder.format(),
+                    frame.timestamp()
+                )
+            })?;
         Ok(())
     }
 

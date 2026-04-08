@@ -1,14 +1,8 @@
+import CapacitorFFmpegNativeCore
 import Foundation
-
-// swiftlint:disable identifier_name
-/// C-compatible result structure matching Rust's CResult
-/// Must match the exact layout of the Rust #[repr(C)] struct
-@frozen
-public struct CResult {
-    let ok: CBool
-    let error_message: UnsafeMutablePointer<CChar>?
-}
-// swiftlint:enable identifier_name
+import ImageIO
+import UIKit
+import UniformTypeIdentifiers
 
 extension CResult {
     /// Extract error message as Swift String if available
@@ -28,45 +22,59 @@ extension CResult {
     }
 }
 
-/// Initializes the FFmpeg plugin
-/// - Returns: A pointer to the initialized plugin instance, or nil if initialization fails
-@_silgen_name("init_ffmpeg_plugin")
-func init_ffmpeg_plugin() -> UnsafeMutableRawPointer?
+typealias FFmpegProgressCallback = @convention(c) (Double, UnsafeMutableRawPointer?) -> Int32
 
-/// Deinitializes the FFmpeg plugin and frees associated resources
-/// - Parameter plugin: A valid pointer to the plugin instance obtained from init_ffmpeg_plugin
-@_silgen_name("deinit_ffmpeg_plugin")
-func deinit_ffmpeg_plugin(_ plugin: UnsafeMutableRawPointer)
+protocol FFmpegNativeBinding {
+    func initPlugin() -> UnsafeMutableRawPointer?
+    func deinitPlugin(_ plugin: UnsafeMutableRawPointer)
+    func freeResult(_ rawResult: UnsafeMutablePointer<CResult>)
+    func reencodeVideo(
+        plugin: UnsafeMutableRawPointer,
+        inputPath: UnsafePointer<CChar>,
+        outputPath: UnsafePointer<CChar>,
+        targetWidth: Int32,
+        targetHeight: Int32,
+        bitrate: Int32,
+        statePointer: UnsafeMutableRawPointer?,
+        progressCallback: @escaping FFmpegProgressCallback
+    ) -> UnsafeMutablePointer<CResult>?
+}
 
-/// Free the CResult structure and associated error message
-/// This must be called when done with a CResult from reencode_video
-@_silgen_name("free_c_result")
-func free_c_result(_ result: UnsafeMutablePointer<CResult>)
+private struct LinkedFFmpegNativeBindings: FFmpegNativeBinding {
+    func initPlugin() -> UnsafeMutableRawPointer? {
+        init_ffmpeg_plugin()
+    }
 
-// swiftlint:disable function_parameter_count
-/// Re-encode a video file to a lower resolution
-/// - Parameters:
-///   - plugin: A valid pointer to the plugin instance
-///   - inputPath: Path to the input video file (C string)
-///   - outputPath: Path to the output video file (C string)
-///   - targetWidth: Target width for the output video
-///   - targetHeight: Target height for the output video
-///   - bitrate: Target bitrate in bits per second (0 or negative for default)
-///   - swiftInternalDataStructurePointer: Pointer to Swift data structure for callbacks
-///   - informAboutProgress: Callback function for progress updates
-/// - Returns: Pointer to CResult structure - caller must call free_c_result() when done
-@_silgen_name("reencode_video")
-func reencode_video(
-    _ plugin: UnsafeMutableRawPointer,
-    _ inputPath: UnsafePointer<CChar>,
-    _ outputPath: UnsafePointer<CChar>,
-    _ targetWidth: Int32,
-    _ targetHeight: Int32,
-    _ bitrate: Int32,
-    _ swiftInternalDataStructurePointer: UnsafeMutableRawPointer?,
-    _ informAboutProgress: @escaping @convention(c) (Double, UnsafeMutableRawPointer?) -> Int32
-) -> UnsafeMutablePointer<CResult>
-// swiftlint:enable function_parameter_count
+    func deinitPlugin(_ plugin: UnsafeMutableRawPointer) {
+        deinit_ffmpeg_plugin(plugin)
+    }
+
+    func freeResult(_ rawResult: UnsafeMutablePointer<CResult>) {
+        free_c_result(rawResult)
+    }
+
+    func reencodeVideo(
+        plugin: UnsafeMutableRawPointer,
+        inputPath: UnsafePointer<CChar>,
+        outputPath: UnsafePointer<CChar>,
+        targetWidth: Int32,
+        targetHeight: Int32,
+        bitrate: Int32,
+        statePointer: UnsafeMutableRawPointer?,
+        progressCallback: @escaping FFmpegProgressCallback
+    ) -> UnsafeMutablePointer<CResult>? {
+        reencode_video(
+            plugin,
+            inputPath,
+            outputPath,
+            targetWidth,
+            targetHeight,
+            bitrate,
+            statePointer,
+            progressCallback
+        )
+    }
+}
 
 struct FFmpegAcceptedJob {
     let jobId: String
@@ -76,6 +84,18 @@ struct FFmpegAcceptedJob {
         [
             "jobId": jobId,
             "status": status
+        ]
+    }
+}
+
+struct FFmpegConvertedImage {
+    let outputPath: String
+    let format: String
+
+    var asDictionary: [String: Any] {
+        [
+            "outputPath": outputPath,
+            "format": format
         ]
     }
 }
@@ -108,19 +128,27 @@ struct FFmpegCapabilitiesPayload {
         ]
     }
 
-    static var iosCurrent: Self {
+    static func iosCurrent(nativeCoreAvailable: Bool, nativeCoreReason: String?) -> Self {
         FFmpegCapabilitiesPayload(
             platform: "ios",
             features: [
                 "getPluginVersion": FFmpegCapabilityPayload(status: "available", reason: nil),
                 "getCapabilities": FFmpegCapabilityPayload(status: "available", reason: nil),
                 "reencodeVideo": FFmpegCapabilityPayload(
-                    status: "experimental",
-                    reason: "Rust-backed H.264 video re-encode with copied non-video streams."
+                    status: nativeCoreAvailable ? "experimental" : "unavailable",
+                    reason: nativeCoreAvailable
+                        ? "Rust-backed H.264 video re-encode with copied non-video streams."
+                        : nativeCoreReason
+                ),
+                "convertImage": FFmpegCapabilityPayload(
+                    status: "available",
+                    reason: "Still-image conversion is available on iOS for jpeg and png outputs."
                 ),
                 "progressEvents": FFmpegCapabilityPayload(
-                    status: "available",
-                    reason: "Progress events are emitted for accepted reencode jobs."
+                    status: nativeCoreAvailable ? "available" : "unavailable",
+                    reason: nativeCoreAvailable
+                        ? "Progress events are emitted for accepted reencode jobs."
+                        : nativeCoreReason
                 ),
                 "probeMedia": FFmpegCapabilityPayload(
                     status: "unimplemented",
@@ -203,24 +231,75 @@ private final class SelfForReencodeVideo {
 
 @objc public class CapacitorFFmpeg: NSObject {
     var pointerToRustPlugin: UnsafeMutableRawPointer?
+    private let nativeBindings: any FFmpegNativeBinding
+    private let nativeCoreReason: String?
 
     /// Progress callback closure that can be set from outside
     var onProgress: ((FFmpegProgressPayload) -> Void)?
 
-    override init() {
+    public override convenience init() {
+        self.init(nativeBindings: LinkedFFmpegNativeBindings())
+    }
+
+    init(nativeBindings: any FFmpegNativeBinding) {
+        self.nativeBindings = nativeBindings
+        let resolvedPlugin = nativeBindings.initPlugin()
+        self.pointerToRustPlugin = resolvedPlugin
+        self.nativeCoreReason = resolvedPlugin == nil ? "The native FFmpeg core could not be initialized." : nil
+
         super.init()
 
-        guard let plugin = init_ffmpeg_plugin() else {
+        if resolvedPlugin == nil {
             print("Failed to initialize plugin")
-            return
         }
-        self.pointerToRustPlugin = plugin
     }
 
     deinit {
         if let plugin = self.pointerToRustPlugin {
-            deinit_ffmpeg_plugin(plugin)
+            nativeBindings.deinitPlugin(plugin)
         }
+    }
+
+    private func resolveFileURL(from rawPath: String) throws -> URL {
+        let trimmedPath = rawPath.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmedPath.isEmpty == false else {
+            throw FFmpegError.invalidArgument("A file path is required.")
+        }
+
+        if let url = URL(string: trimmedPath), url.isFileURL {
+            return url
+        }
+
+        return URL(fileURLWithPath: trimmedPath)
+    }
+
+    private func resolveFilesystemPath(from rawPath: String) throws -> String {
+        try resolveFileURL(from: rawPath).path
+    }
+
+    private func resolveDestinationType(for format: String) throws -> CFString {
+        switch format.lowercased() {
+        case "webp":
+            throw FFmpegError.invalidArgument("webp output is not supported on iOS yet. Use jpeg or png.")
+        case "jpeg", "jpg":
+            return UTType.jpeg.identifier as CFString
+        case "png":
+            return UTType.png.identifier as CFString
+        default:
+            throw FFmpegError.invalidArgument("Unsupported image format: \(format)")
+        }
+    }
+
+    private func resolveQuality(_ quality: Double?) throws -> Double? {
+        guard let quality else {
+            return nil
+        }
+
+        guard quality >= 0.0, quality <= 1.0 else {
+            throw FFmpegError.invalidArgument("Image quality must be between 0.0 and 1.0.")
+        }
+
+        return quality
     }
 
     public func reencodeVideo(
@@ -234,6 +313,8 @@ private final class SelfForReencodeVideo {
             throw FFmpegError.pluginNotInitialized
         }
 
+        let resolvedInputPath = try resolveFilesystemPath(from: inputPath)
+        let resolvedOutputPath = try resolveFilesystemPath(from: outputPath)
         let bitrateValue = bitrate ?? 0
         let acceptedJob = FFmpegAcceptedJob(jobId: UUID().uuidString)
         let encodingState = SelfForReencodeVideo(
@@ -242,10 +323,10 @@ private final class SelfForReencodeVideo {
             onProgress: self.onProgress
         )
 
-        DispatchQueue.global(qos: .userInitiated).async {
+        DispatchQueue.global(qos: .userInitiated).async { [self] in
             let statePointer = Unmanaged.passRetained(encodingState).toOpaque()
 
-            let progressCallback: @convention(c) (Double, UnsafeMutableRawPointer?) -> Int32 = { progress, selfPointer in
+            let progressCallback: FFmpegProgressCallback = { progress, selfPointer in
                 guard let selfPointer else {
                     return -1
                 }
@@ -260,19 +341,29 @@ private final class SelfForReencodeVideo {
                 return 0
             }
 
-            let resultPtr = inputPath.withCString { inputCStr in
-                outputPath.withCString { outputCStr in
-                    reencode_video(
-                        plugin,
-                        inputCStr,
-                        outputCStr,
-                        width,
-                        height,
-                        bitrateValue,
-                        statePointer,
-                        progressCallback
+            let resultPtr = resolvedInputPath.withCString { inputCStr in
+                resolvedOutputPath.withCString { outputCStr in
+                    self.nativeBindings.reencodeVideo(
+                        plugin: plugin,
+                        inputPath: inputCStr,
+                        outputPath: outputCStr,
+                        targetWidth: width,
+                        targetHeight: height,
+                        bitrate: bitrateValue,
+                        statePointer: statePointer,
+                        progressCallback: progressCallback
                     )
                 }
+            }
+
+            guard let resultPtr else {
+                let state = Unmanaged<SelfForReencodeVideo>.fromOpaque(statePointer).takeRetainedValue()
+                state.emit(
+                    progress: 0.0,
+                    state: "failed",
+                    message: "The native FFmpeg core returned no result."
+                )
+                return
             }
 
             let state = Unmanaged<SelfForReencodeVideo>.fromOpaque(statePointer).takeRetainedValue()
@@ -293,14 +384,63 @@ private final class SelfForReencodeVideo {
                 )
             }
 
-            free_c_result(resultPtr)
+            self.nativeBindings.freeResult(resultPtr)
         }
 
         return acceptedJob.jobId
     }
 
+    func convertImage(
+        inputPath: String,
+        outputPath: String,
+        format: String,
+        quality: Double? = nil
+    ) throws -> FFmpegConvertedImage {
+        let inputURL = try resolveFileURL(from: inputPath)
+        let outputURL = try resolveFileURL(from: outputPath)
+        let destinationType = try resolveDestinationType(for: format)
+        let normalizedQuality = try resolveQuality(quality)
+
+        guard let source = CGImageSourceCreateWithURL(inputURL as CFURL, nil) else {
+            throw FFmpegError.invalidPath(inputPath)
+        }
+
+        let outputDirectory = outputURL.deletingLastPathComponent()
+        try FileManager.default.createDirectory(
+            at: outputDirectory,
+            withIntermediateDirectories: true
+        )
+
+        if FileManager.default.fileExists(atPath: outputURL.path) {
+            try FileManager.default.removeItem(at: outputURL)
+        }
+
+        guard let destination = CGImageDestinationCreateWithURL(outputURL as CFURL, destinationType, 1, nil) else {
+            throw FFmpegError.reencodingFailed("Could not create the output image container.")
+        }
+
+        var properties: [CFString: Any] = [:]
+        if let normalizedQuality, format.lowercased() != "png" {
+            properties[kCGImageDestinationLossyCompressionQuality] = normalizedQuality
+        }
+
+        CGImageDestinationAddImageFromSource(destination, source, 0, properties as CFDictionary)
+
+        guard CGImageDestinationFinalize(destination) else {
+            throw FFmpegError.reencodingFailed("The converted image could not be finalized.")
+        }
+
+        return FFmpegConvertedImage(
+            outputPath: outputURL.absoluteString,
+            format: format.lowercased() == "jpg" ? "jpeg" : format.lowercased()
+        )
+    }
+
     func getCapabilities() -> FFmpegCapabilitiesPayload {
-        FFmpegCapabilitiesPayload.iosCurrent
+        FFmpegCapabilitiesPayload.iosCurrent(
+            nativeCoreAvailable: pointerToRustPlugin != nil,
+            nativeCoreReason: nativeCoreReason
+        )
     }
 }
 
@@ -309,6 +449,7 @@ public enum FFmpegError: LocalizedError {
     case pluginNotInitialized
     case reencodingFailed(String)
     case invalidPath(String)
+    case invalidArgument(String)
 
     var code: String {
         switch self {
@@ -316,7 +457,7 @@ public enum FFmpegError: LocalizedError {
             return "PLUGIN_NOT_INITIALIZED"
         case .reencodingFailed:
             return "TRANSCODE_FAILED"
-        case .invalidPath:
+        case .invalidPath, .invalidArgument:
             return "INVALID_ARGUMENT"
         }
     }
@@ -329,6 +470,8 @@ public enum FFmpegError: LocalizedError {
             return "Video re-encoding failed: \(message)"
         case .invalidPath(let path):
             return "Invalid file path: \(path)"
+        case .invalidArgument(let message):
+            return message
         }
     }
 }

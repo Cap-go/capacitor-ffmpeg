@@ -4,6 +4,8 @@ import type {
   CapacitorFFmpegPlugin,
   FFmpegAcceptedJob,
   FFmpegCapabilitiesResult,
+  ConvertImageOptions,
+  ConvertImageResult,
   PluginVersionResult,
   ReencodeVideoOptions,
 } from './definitions';
@@ -18,6 +20,10 @@ export class CapacitorFFmpegWeb extends WebPlugin implements CapacitorFFmpegPlug
         reencodeVideo: {
           status: 'unimplemented',
           reason: 'The media pipeline is currently only available on iOS.',
+        },
+        convertImage: {
+          status: 'unimplemented',
+          reason: 'Image conversion is currently only available on iOS and Android.',
         },
         progressEvents: {
           status: 'unavailable',
@@ -50,6 +56,11 @@ export class CapacitorFFmpegWeb extends WebPlugin implements CapacitorFFmpegPlug
   async reencodeVideo(options: ReencodeVideoOptions): Promise<void | FFmpegAcceptedJob> {
     void options;
     throw this.unimplemented('reencodeVideo is currently only available on iOS.');
+  }
+
+  async convertImage(options: ConvertImageOptions): Promise<ConvertImageResult> {
+    void options;
+    throw this.unimplemented('convertImage is currently only available on iOS and Android.');
   }
 
   async getPluginVersion(): Promise<PluginVersionResult> {

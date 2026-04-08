@@ -10,6 +10,7 @@ export type FFmpegErrorCode =
 export type FFmpegCapabilityStatus = 'available' | 'experimental' | 'unimplemented' | 'unavailable';
 export type FFmpegJobState = 'queued' | 'running' | 'completed' | 'failed';
 export type FFmpegProgressState = 'running' | 'completed' | 'failed';
+export type ImageOutputFormat = 'webp' | 'jpeg' | 'png';
 
 export interface FFmpegCapability {
   status: FFmpegCapabilityStatus;
@@ -20,6 +21,7 @@ export interface FFmpegCapabilitiesFeatures {
   getPluginVersion: FFmpegCapability;
   getCapabilities: FFmpegCapability;
   reencodeVideo: FFmpegCapability;
+  convertImage: FFmpegCapability;
   progressEvents: FFmpegCapability;
   probeMedia: FFmpegCapability;
   generateThumbnail: FFmpegCapability;
@@ -41,9 +43,21 @@ export interface ReencodeVideoOptions {
   bitrate?: number;
 }
 
+export interface ConvertImageOptions {
+  inputPath: string;
+  outputPath: string;
+  format: ImageOutputFormat;
+  quality?: number;
+}
+
 export interface FFmpegAcceptedJob {
   jobId: string;
   status: 'queued';
+}
+
+export interface ConvertImageResult {
+  outputPath: string;
+  format: ImageOutputFormat;
 }
 
 export interface FFmpegProgressEvent {
@@ -77,6 +91,15 @@ export interface CapacitorFFmpegPlugin extends Plugin {
    * Android and web currently reject with `UNIMPLEMENTED`.
    */
   reencodeVideo(options: ReencodeVideoOptions): Promise<void | FFmpegAcceptedJob>;
+
+  /**
+   * Convert a still image into another format.
+   *
+   * iOS currently supports `jpeg` and `png`.
+   * Android currently supports `webp`, `jpeg`, and `png`.
+   * Web currently rejects with `UNIMPLEMENTED`.
+   */
+  convertImage(options: ConvertImageOptions): Promise<ConvertImageResult>;
 
   /**
    * Listen for media job progress.

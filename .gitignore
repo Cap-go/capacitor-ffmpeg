@@ -19,6 +19,9 @@ DerivedData/
 
 # macOS files
 .DS_Store
+example-app/.maestro/*.png
+example-app/public/test-media/
+rust/x264-build-ios-sim-arm64/
 
 
 

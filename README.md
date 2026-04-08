@@ -52,14 +52,15 @@ bunx cap sync
 | `getCapabilities`  | ✅              | ✅      | ✅  | Returns the runtime capability matrix so apps can check what is actually usable on the current platform.    |
 | `getPluginVersion` | ✅              | ✅      | ✅  | Web returns `"web"` as a platform marker.                                                                   |
 | `reencodeVideo`    | ⚠️ Experimental | ❌      | ❌  | iOS accepts a queued job and reports lifecycle via `progress`; Android and web reject with `UNIMPLEMENTED`. |
+| `convertImage`     | ✅              | ✅      | ❌  | iOS converts still images to `jpeg` or `png`; Android converts to `webp`, `jpeg`, or `png`; web rejects.    |
 
 ## Platform status
 
-| Platform | Status               | Notes                                                     |
-| -------- | -------------------- | --------------------------------------------------------- |
-| iOS      | Early implementation | Current reference platform for media work.                |
-| Android  | Contract only        | Native media engine still needs to be implemented.        |
-| Web      | Stub only            | Media operations are intentionally unsupported right now. |
+| Platform | Status                        | Notes                                                                                    |
+| -------- | ----------------------------- | ---------------------------------------------------------------------------------------- |
+| iOS      | Early implementation          | Current reference platform for media work.                                               |
+| Android  | Partial native implementation | `convertImage` is native; the broader FFmpeg media engine still needs to be implemented. |
+| Web      | Stub only                     | Media operations are intentionally unsupported right now.                                |
 
 ## API
 
@@ -67,6 +68,7 @@ bunx cap sync
 
 - [`getCapabilities()`](#getcapabilities)
 - [`reencodeVideo(...)`](#reencodevideo)
+- [`convertImage(...)`](#convertimage)
 - [`addListener('progress', ...)`](#addlistenerprogress-)
 - [`getPluginVersion()`](#getpluginversion)
 - [Interfaces](#interfaces)
@@ -107,6 +109,26 @@ Android and web currently reject with `UNIMPLEMENTED`.
 | **`options`** | <code><a href="#reencodevideooptions">ReencodeVideoOptions</a></code> |
 
 **Returns:** <code>Promise&lt;void | <a href="#ffmpegacceptedjob">FFmpegAcceptedJob</a>&gt;</code>
+
+---
+
+### convertImage(...)
+
+```typescript
+convertImage(options: ConvertImageOptions) => Promise<ConvertImageResult>
+```
+
+Convert a still image into another format.
+
+iOS currently supports `jpeg` and `png`.
+Android currently supports `webp`, `jpeg`, and `png`.
+Web currently rejects with `UNIMPLEMENTED`.
+
+| Param         | Type                                                                |
+| ------------- | ------------------------------------------------------------------- |
+| **`options`** | <code><a href="#convertimageoptions">ConvertImageOptions</a></code> |
+
+**Returns:** <code>Promise&lt;<a href="#convertimageresult">ConvertImageResult</a>&gt;</code>
 
 ---
 
@@ -155,6 +177,7 @@ Get the native Capacitor plugin version
 | **`getPluginVersion`**  | <code><a href="#ffmpegcapability">FFmpegCapability</a></code> |
 | **`getCapabilities`**   | <code><a href="#ffmpegcapability">FFmpegCapability</a></code> |
 | **`reencodeVideo`**     | <code><a href="#ffmpegcapability">FFmpegCapability</a></code> |
+| **`convertImage`**      | <code><a href="#ffmpegcapability">FFmpegCapability</a></code> |
 | **`progressEvents`**    | <code><a href="#ffmpegcapability">FFmpegCapability</a></code> |
 | **`probeMedia`**        | <code><a href="#ffmpegcapability">FFmpegCapability</a></code> |
 | **`generateThumbnail`** | <code><a href="#ffmpegcapability">FFmpegCapability</a></code> |
@@ -186,6 +209,22 @@ Get the native Capacitor plugin version
 | **`height`**     | <code>number</code> |
 | **`bitrate`**    | <code>number</code> |
 
+#### ConvertImageResult
+
+| Prop             | Type                                                            |
+| ---------------- | --------------------------------------------------------------- |
+| **`outputPath`** | <code>string</code>                                             |
+| **`format`**     | <code><a href="#imageoutputformat">ImageOutputFormat</a></code> |
+
+#### ConvertImageOptions
+
+| Prop             | Type                                                            |
+| ---------------- | --------------------------------------------------------------- |
+| **`inputPath`**  | <code>string</code>                                             |
+| **`outputPath`** | <code>string</code>                                             |
+| **`format`**     | <code><a href="#imageoutputformat">ImageOutputFormat</a></code> |
+| **`quality`**    | <code>number</code>                                             |
+
 #### PluginListenerHandle
 
 | Prop         | Type                                      |
@@ -214,6 +253,10 @@ Get the native Capacitor plugin version
 #### FFmpegCapabilityStatus
 
 <code>'available' | 'experimental' | 'unimplemented' | 'unavailable'</code>
+
+#### ImageOutputFormat
+
+<code>'webp' | 'jpeg' | 'png'</code>
 
 #### FFmpegProgressState
 

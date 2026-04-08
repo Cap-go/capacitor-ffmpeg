@@ -1,0 +1,28 @@
+appId: app.capgo.ffmpeg
+name: Re-encode picked video
+---
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "FFmpeg capability playground"
+    timeout: 30000
+- tapOn: "Show video workflow"
+- extendedWaitUntil:
+    visible: "Load demo video"
+    timeout: 30000
+- tapOn: "Load demo video"
+- extendedWaitUntil:
+    visible:
+      text: "sample-video.mp4 staged in the app cache."
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      text: "Queue re-encode"
+    direction: DOWN
+    timeout: 10000
+- tapOn: "Queue re-encode"
+- extendedWaitUntil:
+    visible: "Re-encoding completed."
+    timeout: 120000
+- assertVisible: "completed"
+- takeScreenshot: "video-reencode-complete"

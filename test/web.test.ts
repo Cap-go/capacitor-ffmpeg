@@ -18,6 +18,7 @@ describe('CapacitorFFmpegWeb', () => {
       features: {
         getCapabilities: { status: 'available' },
         reencodeVideo: { status: 'unimplemented' },
+        convertImage: { status: 'unimplemented' },
       },
     });
   });
@@ -35,6 +36,17 @@ describe('CapacitorFFmpegWeb', () => {
     ).rejects.toMatchObject({
       code: ExceptionCode.Unimplemented,
       message: 'reencodeVideo is currently only available on iOS.',
+    });
+
+    await expect(
+      plugin.convertImage({
+        inputPath: 'file:///input.png',
+        outputPath: 'file:///output.webp',
+        format: 'webp',
+      }),
+    ).rejects.toMatchObject({
+      code: ExceptionCode.Unimplemented,
+      message: 'convertImage is currently only available on iOS and Android.',
     });
   });
 });

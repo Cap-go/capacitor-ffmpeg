@@ -5,8 +5,8 @@ on:
     branches:
       - renovate/**
   pull_request:
-    branches: [ main ]
-  workflow_call:  # Allow this workflow to be called by other workflows
+    branches: [main]
+  workflow_call: # Allow this workflow to be called by other workflows
 
 jobs:
   guard_swiftpm_version:
@@ -15,6 +15,8 @@ jobs:
     steps:
       - name: Check out
         uses: actions/checkout@v6
+        with:
+          lfs: true
       - name: Enforce capacitor-swift-pm version
         run: |
           set -euo pipefail
@@ -28,6 +30,8 @@ jobs:
     steps:
       - name: Check out
         uses: actions/checkout@v6
+        with:
+          lfs: true
       - uses: oven-sh/setup-bun@v2
       - name: Install dependencies
         id: install_code
@@ -41,13 +45,15 @@ jobs:
           java-version: '21'
       - name: Build
         id: build_code
-        run: npm run verify:android
+        run: bun run verify:android
   build_ios:
     timeout-minutes: 30
     runs-on: macOS-latest
     steps:
       - name: Check out
         uses: actions/checkout@v6
+        with:
+          lfs: true
       - uses: oven-sh/setup-bun@v2
       - name: Install dependencies
         id: install_code
@@ -57,6 +63,108 @@ jobs:
       - name: Build
         id: build_code
         run: bun run verify:ios
+  maestro_android:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v6
+        with:
+          lfs: true
+      - uses: oven-sh/setup-bun@v2
+      - name: Install root dependencies
+        run: bun i
+      - name: Build plugin package
+        run: bun run build
+      - name: Install example app dependencies
+        run: cd example-app && bun install --force
+      - name: Build and sync example app
+        run: cd example-app && bun run build && bun run sync:android
+      - name: Setup java
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'zulu'
+          java-version: '21'
+      - name: Install Maestro CLI
+        run: |
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Run Android Maestro flows
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          profile: pixel_6
+          arch: x86_64
+          script: |
+            cd example-app/android
+            ./gradlew assembleDebug
+            adb install -r app/build/outputs/apk/debug/app-debug.apk
+            cd ..
+            bun run maestro:android
+      - name: Upload Android Maestro artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-android-artifacts
+          path: example-app/build/maestro
+      - name: Publish Android Maestro JUnit report
+        if: always()
+        uses: mikepenz/action-junit-report@v5
+        with:
+          report_paths: example-app/build/maestro/android-report.xml
+          require_tests: true
+  maestro_ios:
+    timeout-minutes: 60
+    runs-on: macOS-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v6
+        with:
+          lfs: true
+      - uses: oven-sh/setup-bun@v2
+      - name: Install root dependencies
+        run: bun i
+      - name: Build plugin package
+        run: bun run build
+      - name: Install example app dependencies
+        run: cd example-app && bun install --force
+      - name: Build and sync example app
+        run: cd example-app && bun run build && bun run sync:ios
+      - name: Setup java
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'zulu'
+          java-version: '21'
+      - name: Install Maestro CLI
+        run: |
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Start iOS simulator
+        run: |
+          maestro start-device --platform ios --os-version 18
+          BOOTED_SIMULATOR_ID=$(xcrun simctl list devices booted | awk -F '[()]' '/Booted/ { print $2; exit }')
+          echo "BOOTED_SIMULATOR_ID=$BOOTED_SIMULATOR_ID" >> "$GITHUB_ENV"
+      - name: Build and install iOS example app
+        run: |
+          cd example-app
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -destination "platform=iOS Simulator,id=$BOOTED_SIMULATOR_ID" -derivedDataPath build/ios-sim build
+          xcrun simctl install "$BOOTED_SIMULATOR_ID" build/ios-sim/Build/Products/Debug-iphonesimulator/App.app
+      - name: Run iOS Maestro flows
+        run: |
+          cd example-app
+          BOOTED_SIMULATOR_ID="$BOOTED_SIMULATOR_ID" bun run maestro:ios
+      - name: Upload iOS Maestro artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-ios-artifacts
+          path: example-app/build/maestro
+      - name: Publish iOS Maestro JUnit report
+        if: always()
+        uses: mikepenz/action-junit-report@v5
+        with:
+          report_paths: example-app/build/maestro/ios-report.xml
+          require_tests: true
   web:
     timeout-minutes: 30
     runs-on: ubuntu-latest
@@ -64,6 +172,8 @@ jobs:
     steps:
       - name: Check out
         uses: actions/checkout@v6
+        with:
+          lfs: true
       - uses: oven-sh/setup-bun@v2
       - name: Install dependencies
         id: install_code
