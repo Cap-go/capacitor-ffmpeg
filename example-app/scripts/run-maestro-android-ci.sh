@@ -307,6 +307,24 @@ new_booted_emulator() {
   return 1
 }
 
+expected_port_emulator_ready() {
+  local device_id="$1"
+  local requested_avd_name="$2"
+  local existing_serials="$3"
+  local active_avd_name
+
+  if ! "$ADB_BIN" -s "$device_id" get-state >/dev/null 2>&1; then
+    return 1
+  fi
+
+  if grep -qxF "$device_id" <<<"$existing_serials"; then
+    active_avd_name="$(booted_emulator_avd_name "$device_id" || true)"
+    [[ -n "$active_avd_name" && "$active_avd_name" == "$requested_avd_name" ]] || return 1
+  fi
+
+  return 0
+}
+
 SELECTED_AVD_NAME=""
 if [[ -n "$PREFERRED_AVD_NAME" ]]; then
   SELECTED_AVD_NAME="$(select_avd_name)"
@@ -367,7 +385,7 @@ launch_avd() {
 
   for _ in $(seq 1 120); do
     if [[ -n "$expected_device_id" ]]; then
-      if "$ADB_BIN" -s "$expected_device_id" get-state >/dev/null 2>&1; then
+      if expected_port_emulator_ready "$expected_device_id" "$avd_name" "$existing_serials"; then
         BOOTED_DEVICE_ID="$expected_device_id"
         return 0
       fi

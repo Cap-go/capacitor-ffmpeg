@@ -3,6 +3,7 @@ name: Convert image from picker
 ---
 - stopApp
 - launchApp
+- runFlow: subflows/ensure-example-app-foreground-android.yaml
 - runFlow: subflows/dismiss-launcher-anr.yaml
 - scrollUntilVisible:
     element:

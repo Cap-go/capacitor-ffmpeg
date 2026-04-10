@@ -3,6 +3,7 @@ name: Verify unsupported Android re-encode contract
 ---
 - stopApp
 - launchApp
+- runFlow: subflows/ensure-example-app-foreground-android.yaml
 - runFlow: subflows/dismiss-launcher-anr.yaml
 - scrollUntilVisible:
     element:
