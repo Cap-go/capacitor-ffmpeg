@@ -162,11 +162,6 @@ jobs:
       - name: Build
         id: build_code
         run: bun run verify:ios && bun run test:macos
-      - name: Upload iOS native core artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-native-core
-          path: ios/CapacitorFFmpegNativeCore.xcframework
   maestro_android:
     timeout-minutes: 60
     runs-on: ubuntu-latest
@@ -236,15 +231,12 @@ jobs:
         uses: actions/checkout@v6
         with:
           submodules: recursive
+      - name: Build iOS native core from source
+        run: cd rust && ./build_native_xcframework.sh
       - uses: oven-sh/setup-bun@v2
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Restore iOS native core artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ios-native-core
-          path: ios
       - name: Install root dependencies
         run: bun i
       - name: Build plugin package
