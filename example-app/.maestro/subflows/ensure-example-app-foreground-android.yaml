@@ -6,6 +6,12 @@ appId: app.capgo.ffmpeg
         text: "Search apps, web and more"
     commands:
       - tapOn: "Ffmpeg Example"
+- runFlow:
+    when:
+      visible:
+        text: "Ffmpeg Example"
+    commands:
+      - tapOn: "Ffmpeg Example"
 - extendedWaitUntil:
     visible: "FFmpeg capability playground"
     timeout: 60000

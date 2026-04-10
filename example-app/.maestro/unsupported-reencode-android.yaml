@@ -12,7 +12,14 @@ name: Verify unsupported Android re-encode contract
     timeout: 30000
     visibilityPercentage: 50
     centerElement: true
-- runFlow: subflows/dismiss-launcher-anr.yaml
+- runFlow: subflows/ensure-example-app-foreground-android.yaml
+- scrollUntilVisible:
+    element:
+      text: "Show video workflow"
+    direction: DOWN
+    timeout: 30000
+    visibilityPercentage: 50
+    centerElement: true
 - tapOn: "Show video workflow"
 - extendedWaitUntil:
     visible: "Verify unsupported path"
