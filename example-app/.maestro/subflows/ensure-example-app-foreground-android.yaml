@@ -1,24 +1,24 @@
 appId: app.capgo.ffmpeg
 ---
 - retry:
-    maxRetries: 3
+    maxRetries: 4
     commands:
       - runFlow:
           when:
-            visible:
-              text: "Search apps, web and more"
+            visible: "Pixel Launcher isn't responding"
           commands:
             - tapOn:
-                text: "Ffmpeg Example"
+                text: "Wait"
                 retryTapIfNoChange: true
+      - launchApp
       - runFlow:
           when:
-            visible:
-              text: "Ffmpeg Example"
+            visible: "Pixel Launcher isn't responding"
           commands:
             - tapOn:
-                text: "Ffmpeg Example"
+                text: "Wait"
                 retryTapIfNoChange: true
+      - launchApp
       - extendedWaitUntil:
           visible: "FFmpeg capability playground"
-          timeout: 15000
+          timeout: 10000
