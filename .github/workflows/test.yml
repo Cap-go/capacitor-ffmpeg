@@ -138,14 +138,16 @@ jobs:
   build_ios:
     needs: changes
     if: needs.changes.outputs.ios == 'true'
-    timeout-minutes: 30
+    timeout-minutes: 90
     runs-on: macOS-latest
     steps:
       - name: Check out
         uses: actions/checkout@v6
         with:
-          lfs: true
+          submodules: recursive
       - uses: oven-sh/setup-bun@v2
+      - name: Build iOS native core from source
+        run: cd rust && ./build_native_xcframework.sh
       - name: Install dependencies
         id: install_code
         run: bun i
@@ -154,6 +156,11 @@ jobs:
       - name: Build
         id: build_code
         run: bun run verify:ios && bun run test:macos
+      - name: Upload iOS native core artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-native-core
+          path: ios/CapacitorFFmpegNativeCore.xcframework
   maestro_android:
     timeout-minutes: 60
     runs-on: ubuntu-latest
@@ -208,7 +215,7 @@ jobs:
           report_paths: example-app/build/maestro/android-report.xml
           require_tests: true
   maestro_ios:
-    timeout-minutes: 60
+    timeout-minutes: 90
     runs-on: macOS-latest
     needs: [changes, build_ios, guard_swiftpm_version]
     if: >-
@@ -222,11 +229,16 @@ jobs:
       - name: Check out
         uses: actions/checkout@v6
         with:
-          lfs: true
+          submodules: recursive
       - uses: oven-sh/setup-bun@v2
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Restore iOS native core artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ios-native-core
+          path: ios
       - name: Install root dependencies
         run: bun i
       - name: Build plugin package
