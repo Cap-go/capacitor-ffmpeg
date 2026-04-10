@@ -207,7 +207,7 @@ jobs:
           curl -Ls "https://get.maestro.mobile.dev" | bash
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
       - name: Run Android Maestro flows
-        run: cd example-app && MAESTRO_ANDROID_SKIP_PREBUILD=1 MAESTRO_ANDROID_MANUAL_DRIVER=1 ./scripts/run-maestro-android-ci.sh
+        run: cd example-app && MAESTRO_ANDROID_SKIP_PREBUILD=1 ./scripts/run-maestro-android-ci.sh
       - name: Upload Android Maestro artifacts
         if: always()
         uses: actions/upload-artifact@v4
