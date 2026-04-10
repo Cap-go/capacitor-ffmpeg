@@ -38,10 +38,13 @@ jobs:
               - '.github/workflows/test.yml'
               - 'example-app/android/**'
               - 'example-app/src/**'
+              - 'example-app/bun.lock'
               - 'example-app/package.json'
+              - 'example-app/scripts/fix-android-plugin-link.mjs'
               - 'example-app/scripts/run-maestro-android*.sh'
               - 'example-app/.maestro/**'
             ios:
+              - '.github/workflows/test.yml'
               - 'ios/**'
               - 'Package.swift'
               - 'CapgoCapacitorFfmpeg.podspec'
@@ -51,6 +54,8 @@ jobs:
               - 'bun.lock'
               - 'example-app/ios/**'
               - 'example-app/src/**'
+              - 'example-app/bun.lock'
+              - 'example-app/package.json'
               - 'example-app/scripts/run-maestro-ios.sh'
               - 'example-app/.maestro/**'
             maestro_android:
@@ -62,10 +67,13 @@ jobs:
               - '.github/workflows/test.yml'
               - 'example-app/android/**'
               - 'example-app/src/**'
+              - 'example-app/bun.lock'
               - 'example-app/package.json'
+              - 'example-app/scripts/fix-android-plugin-link.mjs'
               - 'example-app/scripts/run-maestro-android*.sh'
               - 'example-app/.maestro/**'
             maestro_ios:
+              - '.github/workflows/test.yml'
               - 'ios/**'
               - 'Package.swift'
               - 'CapgoCapacitorFfmpeg.podspec'
@@ -75,6 +83,8 @@ jobs:
               - 'bun.lock'
               - 'example-app/ios/**'
               - 'example-app/src/**'
+              - 'example-app/bun.lock'
+              - 'example-app/package.json'
               - 'example-app/scripts/run-maestro-ios.sh'
               - 'example-app/.maestro/**'
             web:
@@ -201,7 +211,13 @@ jobs:
     timeout-minutes: 60
     runs-on: macOS-latest
     needs: [changes, build_ios, guard_swiftpm_version]
-    if: needs.changes.outputs.maestro_ios == 'true'
+    if: >-
+      ${{
+        always() &&
+        needs.changes.outputs.maestro_ios == 'true' &&
+        needs.build_ios.result == 'success' &&
+        (needs.guard_swiftpm_version.result == 'success' || needs.guard_swiftpm_version.result == 'skipped')
+      }}
     steps:
       - name: Check out
         uses: actions/checkout@v6
