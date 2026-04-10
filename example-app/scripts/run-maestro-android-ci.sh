@@ -190,11 +190,6 @@ select_avd_name() {
       exit 1
     fi
 
-    if ! avd_matches_requested_image "$PREFERRED_AVD_NAME"; then
-      echo "Requested Android AVD $PREFERRED_AVD_NAME does not match $SYSTEM_IMAGE_PACKAGE." >&2
-      exit 1
-    fi
-
     printf '%s\n' "$PREFERRED_AVD_NAME"
     return
   fi
