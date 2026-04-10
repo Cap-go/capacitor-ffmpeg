@@ -3,6 +3,9 @@ name: Run runtime checks
 ---
 - stopApp
 - launchApp
+- extendedWaitUntil:
+    visible: "FFmpeg capability playground"
+    timeout: 120000
 - runFlow: subflows/dismiss-launcher-anr.yaml
 - scrollUntilVisible:
     element:
