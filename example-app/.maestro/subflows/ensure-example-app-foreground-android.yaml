@@ -1,17 +1,24 @@
 appId: app.capgo.ffmpeg
 ---
-- runFlow:
-    when:
-      visible:
-        text: "Search apps, web and more"
+- retry:
+    maxRetries: 3
     commands:
-      - tapOn: "Ffmpeg Example"
-- runFlow:
-    when:
-      visible:
-        text: "Ffmpeg Example"
-    commands:
-      - tapOn: "Ffmpeg Example"
-- extendedWaitUntil:
-    visible: "FFmpeg capability playground"
-    timeout: 60000
+      - runFlow:
+          when:
+            visible:
+              text: "Search apps, web and more"
+          commands:
+            - tapOn:
+                text: "Ffmpeg Example"
+                retryTapIfNoChange: true
+      - runFlow:
+          when:
+            visible:
+              text: "Ffmpeg Example"
+          commands:
+            - tapOn:
+                text: "Ffmpeg Example"
+                retryTapIfNoChange: true
+      - extendedWaitUntil:
+          visible: "FFmpeg capability playground"
+          timeout: 15000
