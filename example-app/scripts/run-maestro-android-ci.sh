@@ -276,6 +276,22 @@ booted_emulator_for_avd() {
   return 1
 }
 
+first_compatible_booted_emulator() {
+  local device_id
+  local active_avd_name
+
+  while IFS= read -r device_id; do
+    [[ -n "$device_id" ]] || continue
+    active_avd_name="$(booted_emulator_avd_name "$device_id" || true)"
+    if [[ -n "$active_avd_name" ]] && avd_matches_requested_image "$active_avd_name"; then
+      printf '%s\n' "$device_id"
+      return 0
+    fi
+  done < <(booted_emulator_serials)
+
+  return 1
+}
+
 new_booted_emulator() {
   local existing_serials="$1"
   local device_id
@@ -296,7 +312,7 @@ if [[ -n "$PREFERRED_AVD_NAME" ]]; then
   SELECTED_AVD_NAME="$(select_avd_name)"
   BOOTED_DEVICE_ID="$(booted_emulator_for_avd "$SELECTED_AVD_NAME" || true)"
 else
-  BOOTED_DEVICE_ID="$(first_booted_emulator)"
+  BOOTED_DEVICE_ID="$(first_compatible_booted_emulator || true)"
 fi
 
 STARTED_EMULATOR=0
