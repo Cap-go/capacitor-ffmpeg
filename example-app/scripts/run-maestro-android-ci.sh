@@ -60,7 +60,8 @@ esac
 SYSTEM_IMAGE_PACKAGE="system-images;android-${ANDROID_API_LEVEL};${ANDROID_TAG};${ANDROID_ABI}"
 DEFAULT_AVD_NAME="maestro-pixel-6-api${ANDROID_API_LEVEL}-${ANDROID_ABI}"
 PREFERRED_AVD_NAME="${MAESTRO_ANDROID_AVD:-}"
-EMULATOR_PORT="${MAESTRO_ANDROID_PORT:-5554}"
+EXPLICIT_EMULATOR_PORT="${MAESTRO_ANDROID_PORT:-}"
+EMULATOR_PORT="${EXPLICIT_EMULATOR_PORT:-5554}"
 EMULATOR_BOOT_TIMEOUT_SECONDS="${MAESTRO_ANDROID_BOOT_TIMEOUT_SECONDS:-240}"
 PACKAGE_MANAGER_TIMEOUT_SECONDS="${MAESTRO_ANDROID_PACKAGE_MANAGER_TIMEOUT_SECONDS:-120}"
 EMULATOR_LOG="$ROOT_DIR/build/maestro/android-emulator.log"
@@ -250,11 +251,59 @@ wait_for_boot_completion() {
   exit 1
 }
 
-first_booted_emulator() {
-  "$ADB_BIN" devices | awk 'NR > 1 && $1 ~ /^emulator-[0-9]+$/ && $2 == "device" { print $1; exit }'
+booted_emulator_serials() {
+  "$ADB_BIN" devices | awk 'NR > 1 && $1 ~ /^emulator-[0-9]+$/ && $2 == "device" { print $1 }'
 }
 
-BOOTED_DEVICE_ID="$(first_booted_emulator)"
+first_booted_emulator() {
+  booted_emulator_serials | head -n 1
+}
+
+booted_emulator_avd_name() {
+  local device_id="$1"
+  "$ADB_BIN" -s "$device_id" emu avd name 2>/dev/null | tr -d '\r' | awk 'NF && $0 != "OK" { print; exit }'
+}
+
+booted_emulator_for_avd() {
+  local requested_avd_name="$1"
+  local device_id
+  local active_avd_name
+
+  while IFS= read -r device_id; do
+    [[ -n "$device_id" ]] || continue
+    active_avd_name="$(booted_emulator_avd_name "$device_id" || true)"
+    if [[ "$active_avd_name" == "$requested_avd_name" ]]; then
+      printf '%s\n' "$device_id"
+      return 0
+    fi
+  done < <(booted_emulator_serials)
+
+  return 1
+}
+
+new_booted_emulator() {
+  local existing_serials="$1"
+  local device_id
+
+  while IFS= read -r device_id; do
+    [[ -n "$device_id" ]] || continue
+    if ! grep -qxF "$device_id" <<<"$existing_serials"; then
+      printf '%s\n' "$device_id"
+      return 0
+    fi
+  done < <(booted_emulator_serials)
+
+  return 1
+}
+
+SELECTED_AVD_NAME=""
+if [[ -n "$PREFERRED_AVD_NAME" ]]; then
+  SELECTED_AVD_NAME="$(select_avd_name)"
+  BOOTED_DEVICE_ID="$(booted_emulator_for_avd "$SELECTED_AVD_NAME" || true)"
+else
+  BOOTED_DEVICE_ID="$(first_booted_emulator)"
+fi
+
 STARTED_EMULATOR=0
 EMULATOR_PID=""
 PRESERVE_STARTED_EMULATOR=0
@@ -284,19 +333,39 @@ trap cleanup EXIT
 
 launch_avd() {
   local avd_name="$1"
+  local existing_serials
+  local expected_device_id=""
+  local launched_device_id=""
+  local -a emulator_args
 
   resolve_emulator_tooling
   mkdir -p "$(dirname "$EMULATOR_LOG")"
   : >"$EMULATOR_LOG"
 
-  BOOTED_DEVICE_ID="emulator-${EMULATOR_PORT}"
-  "$EMULATOR_BIN" "@$avd_name" -port "$EMULATOR_PORT" -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none -camera-front none >"$EMULATOR_LOG" 2>&1 &
+  existing_serials="$(booted_emulator_serials)"
+  emulator_args=("@$avd_name" -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none -camera-front none)
+  if [[ -n "$EXPLICIT_EMULATOR_PORT" || -z "$existing_serials" ]]; then
+    expected_device_id="emulator-${EMULATOR_PORT}"
+    emulator_args=("@$avd_name" -port "$EMULATOR_PORT" -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none -camera-front none)
+  fi
+
+  BOOTED_DEVICE_ID=""
+  "$EMULATOR_BIN" "${emulator_args[@]}" >"$EMULATOR_LOG" 2>&1 &
   EMULATOR_PID=$!
   STARTED_EMULATOR=1
 
   for _ in $(seq 1 120); do
-    if "$ADB_BIN" -s "$BOOTED_DEVICE_ID" get-state >/dev/null 2>&1; then
-      return 0
+    if [[ -n "$expected_device_id" ]]; then
+      if "$ADB_BIN" -s "$expected_device_id" get-state >/dev/null 2>&1; then
+        BOOTED_DEVICE_ID="$expected_device_id"
+        return 0
+      fi
+    else
+      launched_device_id="$(new_booted_emulator "$existing_serials" || true)"
+      if [[ -n "$launched_device_id" ]]; then
+        BOOTED_DEVICE_ID="$launched_device_id"
+        return 0
+      fi
     fi
 
     if ! kill -0 "$EMULATOR_PID" >/dev/null 2>&1; then
@@ -312,7 +381,7 @@ launch_avd() {
 }
 
 if [[ -z "$BOOTED_DEVICE_ID" ]]; then
-  AVD_NAME="$(select_avd_name)"
+  AVD_NAME="${SELECTED_AVD_NAME:-$(select_avd_name)}"
   if ! launch_avd "$AVD_NAME"; then
     stop_started_emulator
 
