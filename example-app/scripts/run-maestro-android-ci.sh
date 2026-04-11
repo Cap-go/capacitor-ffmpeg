@@ -93,7 +93,10 @@ resolve_emulator_tooling() {
 
 accept_android_licenses() {
   resolve_emulator_tooling
-  printf 'y\ny\ny\ny\ny\ny\n' | "$SDKMANAGER_BIN" --licenses >/dev/null || true
+  if ! (set +o pipefail; yes 2>/dev/null | "$SDKMANAGER_BIN" --licenses >/dev/null); then
+    echo "Failed to accept Android SDK licenses." >&2
+    exit 1
+  fi
 }
 
 ensure_system_image() {
