@@ -124,13 +124,24 @@ public class CapacitorFFmpegPlugin: CAPPlugin, CAPBridgedPlugin {
         }
 
         do {
-            let result = try implementation.convertAudio(
+            try implementation.convertAudio(
                 inputPath: inputPath,
                 outputPath: outputPath,
                 format: format
-            )
-
-            call.resolve(result.asDictionary)
+            ) { [weak self] result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success(let convertedAudio):
+                        call.resolve(convertedAudio.asDictionary)
+                    case .failure(let error):
+                        guard let self else {
+                            call.reject(error.localizedDescription, "TRANSCODE_FAILED")
+                            return
+                        }
+                        self.reject(call, with: error)
+                    }
+                }
+            }
         } catch {
             reject(call, with: error)
         }

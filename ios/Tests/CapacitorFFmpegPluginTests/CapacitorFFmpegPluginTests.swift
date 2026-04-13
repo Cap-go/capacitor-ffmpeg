@@ -77,6 +77,29 @@ private func writeToneWav(to url: URL) throws {
 }
 
 final class CapacitorFFmpegPluginTests: XCTestCase {
+    private func waitForAudioConversion(
+        using plugin: CapacitorFFmpeg,
+        inputPath: String,
+        outputPath: String,
+        format: String,
+        timeout: TimeInterval = 1.0
+    ) throws -> Result<FFmpegConvertedAudio, Error> {
+        let expectation = expectation(description: "convertAudio")
+        var conversionResult: Result<FFmpegConvertedAudio, Error>?
+
+        try plugin.convertAudio(
+            inputPath: inputPath,
+            outputPath: outputPath,
+            format: format
+        ) { result in
+            conversionResult = result
+            expectation.fulfill()
+        }
+
+        wait(for: [expectation], timeout: timeout)
+        return try XCTUnwrap(conversionResult)
+    }
+
     func testCapabilitiesPayloadDescribesTheCurrentIosScope() {
         let payload = CapacitorFFmpeg().getCapabilities().asDictionary
         let features = payload["features"] as? [String: [String: Any]]
@@ -220,10 +243,33 @@ final class CapacitorFFmpegPluginTests: XCTestCase {
                 inputPath: inputURL.path,
                 outputPath: outputURL.path,
                 format: "wav"
-            )
+            ) { _ in }
         ) { error in
             XCTAssertEqual((error as? FFmpegError)?.code, "INVALID_ARGUMENT")
             XCTAssertEqual(error.localizedDescription, "Unsupported audio format: wav")
+        }
+    }
+
+    func testConvertAudioRejectsMismatchedOutputExtension() throws {
+        let fileManager = FileManager.default
+        let baseURL = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fileManager.createDirectory(at: baseURL, withIntermediateDirectories: true)
+        defer { try? fileManager.removeItem(at: baseURL) }
+
+        let inputURL = baseURL.appendingPathComponent("input.wav")
+        let outputURL = baseURL.appendingPathComponent("output.wav")
+
+        try writeToneWav(to: inputURL)
+
+        XCTAssertThrowsError(
+            try CapacitorFFmpeg().convertAudio(
+                inputPath: inputURL.path,
+                outputPath: outputURL.path,
+                format: "m4a"
+            ) { _ in }
+        ) { error in
+            XCTAssertEqual((error as? FFmpegError)?.code, "INVALID_ARGUMENT")
+            XCTAssertEqual(error.localizedDescription, "Output path extension must be .m4a.")
         }
     }
 
@@ -246,18 +292,23 @@ final class CapacitorFFmpegPluginTests: XCTestCase {
             session.status = .completed
         }
 
-        let result = try CapacitorFFmpeg(audioExportSessionFactory: { asset, presetName in
+        let result = try waitForAudioConversion(using: CapacitorFFmpeg(audioExportSessionFactory: { asset, presetName in
             XCTAssertEqual(asset.tracks(withMediaType: .audio).count, 1)
             XCTAssertEqual(presetName, AVAssetExportPresetAppleM4A)
             return exportSession
-        }).convertAudio(
-            inputPath: inputURL.path,
-            outputPath: outputURL.path,
-            format: "m4a"
+        }),
+        inputPath: inputURL.path,
+        outputPath: outputURL.path,
+        format: "m4a"
         )
 
-        XCTAssertEqual(result.format, "m4a")
-        XCTAssertEqual(result.outputPath, outputURL.absoluteString)
+        switch result {
+        case .success(let convertedAudio):
+            XCTAssertEqual(convertedAudio.format, "m4a")
+            XCTAssertEqual(convertedAudio.outputPath, outputURL.absoluteString)
+        case .failure(let error):
+            XCTFail("Expected successful audio conversion, got \(error)")
+        }
         XCTAssertEqual(try String(contentsOf: outputURL), "converted-audio")
     }
 
@@ -282,13 +333,17 @@ final class CapacitorFFmpegPluginTests: XCTestCase {
             try? Data("partial-output".utf8).write(to: XCTUnwrap(session.outputURL))
         }
 
-        XCTAssertThrowsError(
-            try CapacitorFFmpeg(audioExportSessionFactory: { _, _ in exportSession }).convertAudio(
-                inputPath: inputURL.path,
-                outputPath: outputURL.path,
-                format: "m4a"
-            )
-        ) { error in
+        let result = try waitForAudioConversion(
+            using: CapacitorFFmpeg(audioExportSessionFactory: { _, _ in exportSession }),
+            inputPath: inputURL.path,
+            outputPath: outputURL.path,
+            format: "m4a"
+        )
+
+        switch result {
+        case .success:
+            XCTFail("Expected audio conversion failure")
+        case .failure(let error):
             XCTAssertEqual((error as? FFmpegError)?.code, "TRANSCODE_FAILED")
             XCTAssertEqual(error.localizedDescription, "Media transcode failed: simulated export failure")
         }
@@ -315,13 +370,17 @@ final class CapacitorFFmpegPluginTests: XCTestCase {
             try? Data("partial-output".utf8).write(to: XCTUnwrap(session.outputURL))
         }
 
-        XCTAssertThrowsError(
-            try CapacitorFFmpeg(audioExportSessionFactory: { _, _ in exportSession }).convertAudio(
-                inputPath: inputURL.path,
-                outputPath: outputURL.path,
-                format: "m4a"
-            )
-        ) { error in
+        let result = try waitForAudioConversion(
+            using: CapacitorFFmpeg(audioExportSessionFactory: { _, _ in exportSession }),
+            inputPath: inputURL.path,
+            outputPath: outputURL.path,
+            format: "m4a"
+        )
+
+        switch result {
+        case .success:
+            XCTFail("Expected audio conversion failure")
+        case .failure(let error):
             XCTAssertEqual((error as? FFmpegError)?.code, "TRANSCODE_FAILED")
         }
 

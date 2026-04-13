@@ -126,6 +126,8 @@ struct FFmpegConvertedAudio {
     }
 }
 
+typealias AudioConversionCompletion = (Result<FFmpegConvertedAudio, Error>) -> Void
+
 struct FFmpegCapabilityPayload {
     let status: String
     let reason: String?
@@ -521,8 +523,9 @@ private final class SelfForReencodeVideo {
     func convertAudio(
         inputPath: String,
         outputPath: String,
-        format: String
-    ) throws -> FFmpegConvertedAudio {
+        format: String,
+        completion: @escaping AudioConversionCompletion
+    ) throws {
         let inputURL = try resolveFileURL(from: inputPath).standardizedFileURL
         let outputURL = try resolveFileURL(from: outputPath).standardizedFileURL
         let normalizedFormat = format.lowercased()
@@ -533,6 +536,9 @@ private final class SelfForReencodeVideo {
 
         guard normalizedFormat == "m4a" else {
             throw FFmpegError.invalidArgument("Unsupported audio format: \(format)")
+        }
+        guard outputURL.pathExtension.lowercased() == normalizedFormat else {
+            throw FFmpegError.invalidArgument("Output path extension must be .\(normalizedFormat).")
         }
 
         let asset = AVURLAsset(url: inputURL)
@@ -561,28 +567,28 @@ private final class SelfForReencodeVideo {
         exportSession.outputURL = temporaryOutputURL
         exportSession.outputFileType = .m4a
 
-        let semaphore = DispatchSemaphore(value: 0)
         exportSession.exportAsynchronously {
-            semaphore.signal()
-        }
-        semaphore.wait()
+            do {
+                guard exportSession.status == .completed else {
+                    throw FFmpegError.transcodeFailed(
+                        exportSession.error?.localizedDescription ?? "Could not export the output audio."
+                    )
+                }
 
-        guard exportSession.status == .completed else {
-            throw FFmpegError.transcodeFailed(
-                exportSession.error?.localizedDescription ?? "Could not export the output audio."
-            )
-        }
+                if fileManager.fileExists(atPath: outputURL.path) {
+                    _ = try fileManager.replaceItemAt(outputURL, withItemAt: temporaryOutputURL)
+                } else {
+                    try fileManager.moveItem(at: temporaryOutputURL, to: outputURL)
+                }
 
-        if fileManager.fileExists(atPath: outputURL.path) {
-            _ = try fileManager.replaceItemAt(outputURL, withItemAt: temporaryOutputURL)
-        } else {
-            try fileManager.moveItem(at: temporaryOutputURL, to: outputURL)
+                completion(.success(FFmpegConvertedAudio(
+                    outputPath: outputURL.absoluteString,
+                    format: normalizedFormat
+                )))
+            } catch {
+                completion(.failure(error))
+            }
         }
-
-        return FFmpegConvertedAudio(
-            outputPath: outputURL.absoluteString,
-            format: normalizedFormat
-        )
     }
 
     func getCapabilities() -> FFmpegCapabilitiesPayload {
