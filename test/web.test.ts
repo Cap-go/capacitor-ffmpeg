@@ -20,6 +20,7 @@ describe('CapacitorFFmpegWeb', () => {
         getCapabilities: { status: 'available' },
         reencodeVideo: { status: 'unimplemented' },
         convertImage: { status: 'unimplemented' },
+        convertAudio: { status: 'unimplemented' },
       },
     });
   });
@@ -48,6 +49,17 @@ describe('CapacitorFFmpegWeb', () => {
     ).rejects.toMatchObject({
       code: ExceptionCode.Unimplemented,
       message: 'convertImage is currently only available on iOS and Android.',
+    });
+
+    await expect(
+      plugin.convertAudio({
+        inputPath: 'file:///input.wav',
+        outputPath: 'file:///output.m4a',
+        format: 'm4a',
+      }),
+    ).rejects.toMatchObject({
+      code: ExceptionCode.Unimplemented,
+      message: 'convertAudio is currently only available on iOS.',
     });
   });
 });

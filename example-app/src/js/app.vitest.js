@@ -24,6 +24,13 @@ function createCapabilities(platform, overrides = {}) {
             ? 'Still-image conversion is available on iOS.'
             : 'Image conversion is currently only available on iOS and Android.',
       },
+      convertAudio: {
+        status: overrides.convertAudio ?? 'unimplemented',
+        reason:
+          overrides.convertAudio === 'available'
+            ? 'Audio conversion is available on iOS.'
+            : 'Audio conversion is currently only available on iOS.',
+      },
       progressEvents: {
         status: overrides.reencodeVideo === 'experimental' ? 'available' : 'unavailable',
         reason:

@@ -2,10 +2,12 @@ import { WebPlugin } from '@capacitor/core';
 
 import type {
   CapacitorFFmpegPlugin,
-  FFmpegAcceptedJob,
-  FFmpegCapabilitiesResult,
+  ConvertAudioOptions,
+  ConvertAudioResult,
   ConvertImageOptions,
   ConvertImageResult,
+  FFmpegAcceptedJob,
+  FFmpegCapabilitiesResult,
   PluginVersionResult,
   ReencodeVideoOptions,
 } from './definitions';
@@ -25,6 +27,10 @@ export class CapacitorFFmpegWeb extends WebPlugin implements CapacitorFFmpegPlug
         convertImage: {
           status: 'unimplemented',
           reason: 'Image conversion is currently only available on iOS and Android.',
+        },
+        convertAudio: {
+          status: 'unimplemented',
+          reason: 'Audio conversion is currently only available on iOS.',
         },
         progressEvents: {
           status: 'unavailable',
@@ -62,6 +68,11 @@ export class CapacitorFFmpegWeb extends WebPlugin implements CapacitorFFmpegPlug
   async convertImage(options: ConvertImageOptions): Promise<ConvertImageResult> {
     void options;
     throw this.unimplemented('convertImage is currently only available on iOS and Android.');
+  }
+
+  async convertAudio(options: ConvertAudioOptions): Promise<ConvertAudioResult> {
+    void options;
+    throw this.unimplemented('convertAudio is currently only available on iOS.');
   }
 
   async getPluginVersion(): Promise<PluginVersionResult> {

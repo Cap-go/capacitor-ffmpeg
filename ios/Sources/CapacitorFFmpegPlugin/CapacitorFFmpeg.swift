@@ -1,4 +1,5 @@
 import CapacitorFFmpegNativeCore
+import AVFoundation
 import Foundation
 import ImageIO
 import UIKit
@@ -39,6 +40,19 @@ protocol FFmpegNativeBinding {
         progressCallback: @escaping FFmpegProgressCallback
     ) -> UnsafeMutablePointer<CResult>?
 }
+
+protocol AudioExportSessioning: AnyObject {
+    var outputURL: URL? { get set }
+    var outputFileType: AVFileType? { get set }
+    var status: AVAssetExportSession.Status { get }
+    var error: Error? { get }
+
+    func exportAsynchronously(completionHandler handler: @escaping @Sendable () -> Void)
+}
+
+extension AVAssetExportSession: AudioExportSessioning {}
+
+typealias AudioExportSessionFactory = (_ asset: AVAsset, _ presetName: String) -> (any AudioExportSessioning)?
 
 private struct LinkedFFmpegNativeBindings: FFmpegNativeBinding {
     func initPlugin() -> UnsafeMutableRawPointer? {
@@ -100,6 +114,20 @@ struct FFmpegConvertedImage {
     }
 }
 
+struct FFmpegConvertedAudio {
+    let outputPath: String
+    let format: String
+
+    var asDictionary: [String: Any] {
+        [
+            "outputPath": outputPath,
+            "format": format
+        ]
+    }
+}
+
+typealias AudioConversionCompletion = (Result<FFmpegConvertedAudio, Error>) -> Void
+
 struct FFmpegCapabilityPayload {
     let status: String
     let reason: String?
@@ -143,6 +171,10 @@ struct FFmpegCapabilitiesPayload {
                 "convertImage": FFmpegCapabilityPayload(
                     status: "available",
                     reason: "Still-image conversion is available on iOS for jpeg and png outputs."
+                ),
+                "convertAudio": FFmpegCapabilityPayload(
+                    status: "available",
+                    reason: "Audio conversion is available on iOS for m4a output."
                 ),
                 "progressEvents": FFmpegCapabilityPayload(
                     status: nativeCoreAvailable ? "available" : "unavailable",
@@ -232,17 +264,29 @@ private final class SelfForReencodeVideo {
 @objc public class CapacitorFFmpeg: NSObject {
     var pointerToRustPlugin: UnsafeMutableRawPointer?
     private let nativeBindings: any FFmpegNativeBinding
+    private let audioExportSessionFactory: AudioExportSessionFactory
     private let nativeCoreReason: String?
 
     /// Progress callback closure that can be set from outside
     var onProgress: ((FFmpegProgressPayload) -> Void)?
 
-    public override convenience init() {
+    override public convenience init() {
         self.init(nativeBindings: LinkedFFmpegNativeBindings())
     }
 
-    init(nativeBindings: any FFmpegNativeBinding) {
+    convenience init(audioExportSessionFactory: @escaping AudioExportSessionFactory) {
+        self.init(
+            nativeBindings: LinkedFFmpegNativeBindings(),
+            audioExportSessionFactory: audioExportSessionFactory
+        )
+    }
+
+    init(
+        nativeBindings: any FFmpegNativeBinding,
+        audioExportSessionFactory: @escaping AudioExportSessionFactory = CapacitorFFmpeg.defaultAudioExportSessionFactory
+    ) {
         self.nativeBindings = nativeBindings
+        self.audioExportSessionFactory = audioExportSessionFactory
         let resolvedPlugin = nativeBindings.initPlugin()
         self.pointerToRustPlugin = resolvedPlugin
         self.nativeCoreReason = resolvedPlugin == nil ? "The native FFmpeg core could not be initialized." : nil
@@ -252,6 +296,13 @@ private final class SelfForReencodeVideo {
         if resolvedPlugin == nil {
             print("Failed to initialize plugin")
         }
+    }
+
+    private static func defaultAudioExportSessionFactory(
+        asset: AVAsset,
+        presetName: String
+    ) -> (any AudioExportSessioning)? {
+        AVAssetExportSession(asset: asset, presetName: presetName)
     }
 
     deinit {
@@ -469,6 +520,77 @@ private final class SelfForReencodeVideo {
         )
     }
 
+    func convertAudio(
+        inputPath: String,
+        outputPath: String,
+        format: String,
+        completion: @escaping AudioConversionCompletion
+    ) throws {
+        let inputURL = try resolveFileURL(from: inputPath).standardizedFileURL
+        let outputURL = try resolveFileURL(from: outputPath).standardizedFileURL
+        let normalizedFormat = format.lowercased()
+
+        guard inputURL.path != outputURL.path else {
+            throw FFmpegError.invalidArgument("In-place conversion is not allowed. Choose a different output path.")
+        }
+
+        guard normalizedFormat == "m4a" else {
+            throw FFmpegError.invalidArgument("Unsupported audio format: \(format)")
+        }
+        guard outputURL.pathExtension.lowercased() == normalizedFormat else {
+            throw FFmpegError.invalidArgument("Output path extension must be .\(normalizedFormat).")
+        }
+
+        let asset = AVURLAsset(url: inputURL)
+        guard !asset.tracks(withMediaType: .audio).isEmpty else {
+            throw FFmpegError.invalidArgument("The input media does not contain an audio track.")
+        }
+
+        let fileManager = FileManager.default
+        let outputDirectory = outputURL.deletingLastPathComponent()
+        try fileManager.createDirectory(
+            at: outputDirectory,
+            withIntermediateDirectories: true
+        )
+        let temporaryOutputURL = outputDirectory
+            .appendingPathComponent(".ffmpeg-audio-\(UUID().uuidString)")
+            .appendingPathExtension(outputURL.pathExtension.isEmpty ? "m4a" : outputURL.pathExtension)
+
+        guard let exportSession = audioExportSessionFactory(asset, AVAssetExportPresetAppleM4A) else {
+            throw FFmpegError.transcodeFailed("Could not create the audio export session.")
+        }
+
+        exportSession.outputURL = temporaryOutputURL
+        exportSession.outputFileType = .m4a
+
+        exportSession.exportAsynchronously {
+            defer {
+                try? fileManager.removeItem(at: temporaryOutputURL)
+            }
+
+            do {
+                guard exportSession.status == .completed else {
+                    throw FFmpegError.transcodeFailed(
+                        exportSession.error?.localizedDescription ?? "Could not export the output audio."
+                    )
+                }
+
+                if fileManager.fileExists(atPath: outputURL.path) {
+                    _ = try fileManager.replaceItemAt(outputURL, withItemAt: temporaryOutputURL)
+                } else {
+                    try fileManager.moveItem(at: temporaryOutputURL, to: outputURL)
+                }
+
+                completion(.success(FFmpegConvertedAudio(
+                    outputPath: outputURL.absoluteString,
+                    format: normalizedFormat
+                )))
+            } catch {
+                completion(.failure(error))
+            }
+        }
+    }
+
     func getCapabilities() -> FFmpegCapabilitiesPayload {
         FFmpegCapabilitiesPayload.iosCurrent(
             nativeCoreAvailable: pointerToRustPlugin != nil,
@@ -481,6 +603,7 @@ private final class SelfForReencodeVideo {
 public enum FFmpegError: LocalizedError {
     case pluginNotInitialized
     case reencodingFailed(String)
+    case transcodeFailed(String)
     case invalidPath(String)
     case invalidArgument(String)
 
@@ -488,7 +611,7 @@ public enum FFmpegError: LocalizedError {
         switch self {
         case .pluginNotInitialized:
             return "PLUGIN_NOT_INITIALIZED"
-        case .reencodingFailed:
+        case .reencodingFailed, .transcodeFailed:
             return "TRANSCODE_FAILED"
         case .invalidPath, .invalidArgument:
             return "INVALID_ARGUMENT"
@@ -501,6 +624,8 @@ public enum FFmpegError: LocalizedError {
             return "FFmpeg plugin was not properly initialized"
         case .reencodingFailed(let message):
             return "Video re-encoding failed: \(message)"
+        case .transcodeFailed(let message):
+            return "Media transcode failed: \(message)"
         case .invalidPath(let path):
             return "Invalid file path: \(path)"
         case .invalidArgument(let message):

@@ -53,26 +53,28 @@ bunx cap sync
 | `getPluginVersion` | ✅              | ✅      | ✅  | Returns a `{ version }` payload on every platform; use `getCapabilities().platform` for platform detection. |
 | `reencodeVideo`    | ⚠️ Experimental | ❌      | ❌  | iOS accepts a queued job and reports lifecycle via `progress`; Android and web reject with `UNIMPLEMENTED`. |
 | `convertImage`     | ✅              | ✅      | ❌  | iOS converts still images to `jpeg` or `png`; Android converts to `webp`, `jpeg`, or `png`; web rejects.    |
+| `convertAudio`     | ✅              | ❌      | ❌  | iOS converts audio to `m4a`; Android and web reject with `UNIMPLEMENTED`.                                   |
 
 ## Platform status
 
-| Platform | Status                        | Notes                                                                                    |
-| -------- | ----------------------------- | ---------------------------------------------------------------------------------------- |
-| iOS      | Early implementation          | Current reference platform for media work.                                               |
-| Android  | Partial native implementation | `convertImage` is native; the broader FFmpeg media engine still needs to be implemented. |
-| Web      | Stub only                     | Media operations are intentionally unsupported right now.                                |
+| Platform | Status                        | Notes                                                                                                      |
+| -------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| iOS      | Early implementation          | Current reference platform for media work.                                                                 |
+| Android  | Partial native implementation | `convertImage` is native; the broader FFmpeg media engine and `convertAudio` still need to be implemented. |
+| Web      | Stub only                     | Media operations are intentionally unsupported right now.                                                  |
 
 ## API
 
 <docgen-index>
 
-* [`getCapabilities()`](#getcapabilities)
-* [`reencodeVideo(...)`](#reencodevideo)
-* [`convertImage(...)`](#convertimage)
-* [`addListener('progress', ...)`](#addlistenerprogress-)
-* [`getPluginVersion()`](#getpluginversion)
-* [Interfaces](#interfaces)
-* [Type Aliases](#type-aliases)
+- [`getCapabilities()`](#getcapabilities)
+- [`reencodeVideo(...)`](#reencodevideo)
+- [`convertImage(...)`](#convertimage)
+- [`convertAudio(...)`](#convertaudio)
+- [`addListener('progress', ...)`](#addlistenerprogress-)
+- [`getPluginVersion()`](#getpluginversion)
+- [Interfaces](#interfaces)
+- [Type Aliases](#type-aliases)
 
 </docgen-index>
 
@@ -89,8 +91,7 @@ Return the machine-readable capability matrix for the current platform.
 
 **Returns:** <code>Promise&lt;<a href="#ffmpegcapabilitiesresult">FFmpegCapabilitiesResult</a>&gt;</code>
 
---------------------
-
+---
 
 ### reencodeVideo(...)
 
@@ -111,8 +112,7 @@ Android and web currently reject with `UNIMPLEMENTED`.
 
 **Returns:** <code>Promise&lt;<a href="#ffmpegacceptedjob">FFmpegAcceptedJob</a>&gt;</code>
 
---------------------
-
+---
 
 ### convertImage(...)
 
@@ -132,8 +132,26 @@ Web currently rejects with `UNIMPLEMENTED`.
 
 **Returns:** <code>Promise&lt;<a href="#convertimageresult">ConvertImageResult</a>&gt;</code>
 
---------------------
+---
 
+### convertAudio(...)
+
+```typescript
+convertAudio(options: ConvertAudioOptions) => Promise<ConvertAudioResult>
+```
+
+Convert audio into another container or codec.
+
+iOS currently supports `m4a`.
+Android and web currently reject with `UNIMPLEMENTED`.
+
+| Param         | Type                                                                |
+| ------------- | ------------------------------------------------------------------- |
+| **`options`** | <code><a href="#convertaudiooptions">ConvertAudioOptions</a></code> |
+
+**Returns:** <code>Promise&lt;<a href="#convertaudioresult">ConvertAudioResult</a>&gt;</code>
+
+---
 
 ### addListener('progress', ...)
 
@@ -150,8 +168,7 @@ Listen for media job progress.
 
 **Returns:** <code>Promise&lt;<a href="#pluginlistenerhandle">PluginListenerHandle</a>&gt;</code>
 
---------------------
-
+---
 
 ### getPluginVersion()
 
@@ -163,11 +180,9 @@ Get the plugin package version reported by the current platform implementation.
 
 **Returns:** <code>Promise&lt;<a href="#pluginversionresult">PluginVersionResult</a>&gt;</code>
 
---------------------
-
+---
 
 ### Interfaces
-
 
 #### FFmpegCapabilitiesResult
 
@@ -175,7 +190,6 @@ Get the plugin package version reported by the current platform implementation.
 | -------------- | --------------------------------------------------------------------------------- |
 | **`platform`** | <code>string</code>                                                               |
 | **`features`** | <code><a href="#ffmpegcapabilitiesfeatures">FFmpegCapabilitiesFeatures</a></code> |
-
 
 #### FFmpegCapabilitiesFeatures
 
@@ -185,13 +199,13 @@ Get the plugin package version reported by the current platform implementation.
 | **`getCapabilities`**   | <code><a href="#ffmpegcapability">FFmpegCapability</a></code> |
 | **`reencodeVideo`**     | <code><a href="#ffmpegcapability">FFmpegCapability</a></code> |
 | **`convertImage`**      | <code><a href="#ffmpegcapability">FFmpegCapability</a></code> |
+| **`convertAudio`**      | <code><a href="#ffmpegcapability">FFmpegCapability</a></code> |
 | **`progressEvents`**    | <code><a href="#ffmpegcapability">FFmpegCapability</a></code> |
 | **`probeMedia`**        | <code><a href="#ffmpegcapability">FFmpegCapability</a></code> |
 | **`generateThumbnail`** | <code><a href="#ffmpegcapability">FFmpegCapability</a></code> |
 | **`extractAudio`**      | <code><a href="#ffmpegcapability">FFmpegCapability</a></code> |
 | **`remux`**             | <code><a href="#ffmpegcapability">FFmpegCapability</a></code> |
 | **`trim`**              | <code><a href="#ffmpegcapability">FFmpegCapability</a></code> |
-
 
 #### FFmpegCapability
 
@@ -200,14 +214,12 @@ Get the plugin package version reported by the current platform implementation.
 | **`status`** | <code><a href="#ffmpegcapabilitystatus">FFmpegCapabilityStatus</a></code> |
 | **`reason`** | <code>string</code>                                                       |
 
-
 #### FFmpegAcceptedJob
 
 | Prop         | Type                  |
 | ------------ | --------------------- |
 | **`jobId`**  | <code>string</code>   |
 | **`status`** | <code>'queued'</code> |
-
 
 #### ReencodeVideoOptions
 
@@ -219,14 +231,12 @@ Get the plugin package version reported by the current platform implementation.
 | **`height`**     | <code>number</code> |
 | **`bitrate`**    | <code>number</code> |
 
-
 #### ConvertImageResult
 
 | Prop             | Type                                                            |
 | ---------------- | --------------------------------------------------------------- |
 | **`outputPath`** | <code>string</code>                                             |
 | **`format`**     | <code><a href="#imageoutputformat">ImageOutputFormat</a></code> |
-
 
 #### ConvertImageOptions
 
@@ -237,13 +247,26 @@ Get the plugin package version reported by the current platform implementation.
 | **`format`**     | <code><a href="#imageoutputformat">ImageOutputFormat</a></code> |                                                                                                           |
 | **`quality`**    | <code>number</code>                                             | Compression quality in the inclusive range `0.0..1.0`. Native platforms reject values outside that range. |
 
+#### ConvertAudioResult
+
+| Prop             | Type                                                            |
+| ---------------- | --------------------------------------------------------------- |
+| **`outputPath`** | <code>string</code>                                             |
+| **`format`**     | <code><a href="#audiooutputformat">AudioOutputFormat</a></code> |
+
+#### ConvertAudioOptions
+
+| Prop             | Type                                                            |
+| ---------------- | --------------------------------------------------------------- |
+| **`inputPath`**  | <code>string</code>                                             |
+| **`outputPath`** | <code>string</code>                                             |
+| **`format`**     | <code><a href="#audiooutputformat">AudioOutputFormat</a></code> |
 
 #### PluginListenerHandle
 
 | Prop         | Type                                      |
 | ------------ | ----------------------------------------- |
 | **`remove`** | <code>() =&gt; Promise&lt;void&gt;</code> |
-
 
 #### FFmpegProgressEvent
 
@@ -256,26 +279,25 @@ Get the plugin package version reported by the current platform implementation.
 | **`outputPath`** | <code>string</code>                                                 |                                                                                  |
 | **`fileId`**     | <code>string</code>                                                 | Legacy alias kept for compatibility while callers migrate to `jobId`.            |
 
-
 #### PluginVersionResult
 
 | Prop          | Type                |
 | ------------- | ------------------- |
 | **`version`** | <code>string</code> |
 
-
 ### Type Aliases
-
 
 #### FFmpegCapabilityStatus
 
 <code>'available' | 'experimental' | 'unimplemented' | 'unavailable'</code>
 
-
 #### ImageOutputFormat
 
 <code>'webp' | 'jpeg' | 'png'</code>
 
+#### AudioOutputFormat
+
+<code>'m4a'</code>
 
 #### FFmpegProgressState
 

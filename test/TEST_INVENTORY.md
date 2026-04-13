@@ -1,6 +1,6 @@
 # Test Inventory
 
-Last updated: 2026-04-04
+Last updated: 2026-04-13
 
 This file maps the public plugin contract to the tests that exist now and the next regression coverage we still need.
 
@@ -13,6 +13,8 @@ This file maps the public plugin contract to the tests that exist now and the ne
 | `reencodeVideo` unsupported behavior | Plugin-only contract                   | Web contract test, Android unit test helper                                                                       | None for current scope                                                                     |
 | `convertImage` unsupported behavior  | Plugin-only contract                   | Web contract test                                                                                                 | None for current scope                                                                     |
 | `convertImage` native execution      | Still-image transcode                  | Android unit test helper, iOS native test for fixture generation and output write, Maestro Android+iOS flows      | Add wrapper-level test with `CAPPluginCall` and output file metadata validation            |
+| `convertAudio` unsupported behavior  | Plugin-only contract                   | Web contract test, Android unit test helper                                                                       | None for current scope                                                                     |
+| `convertAudio` native execution      | Audio transcode                        | iOS native tests for format validation, successful export wrapper behavior, and failed export cleanup             | Add end-to-end regression against a real exported file when simulator export is stable     |
 | `reencodeVideo` acceptance result    | Plugin job contract                    | iOS helper tests for queued job payload                                                                           | iOS plugin wrapper test                                                                    |
 | `progress` event payload             | Plugin job/progress contract           | iOS helper tests                                                                                                  | End-to-end event assertion during a real encode                                            |
 | Example app runtime harness          | App-level contract smoke               | Vitest example-app checks plus Maestro iOS/Android flows for runtime checks, image conversion, and iOS video flow | Add native device smoke flow: pick arbitrary gallery media -> transcode -> verify metadata |
@@ -43,5 +45,5 @@ We are not importing upstream FATE directly. We are using it as a taxonomy:
 ## Immediate next media tests
 
 1. Generate a tiny MP4 input fixture for the current iOS re-encode flow.
-2. Add an iOS-native regression that checks output dimensions and duration tolerance.
+2. Add a real exported-audio regression once simulator-side `AVAssetExportSession` output is stable in CI.
 3. Add a broken-input fixture and assert structured failure reporting.
