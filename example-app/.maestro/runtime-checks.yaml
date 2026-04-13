@@ -3,9 +3,16 @@ name: Run runtime checks
 ---
 - stopApp
 - launchApp
-- extendedWaitUntil:
-    visible: "Run runtime checks"
-    timeout: 60000
+- runFlow: subflows/ensure-example-app-foreground-android.yaml
+- runFlow: subflows/dismiss-launcher-anr.yaml
+- scrollUntilVisible:
+    element:
+      text: "Run runtime checks"
+    direction: DOWN
+    timeout: 30000
+    visibilityPercentage: 50
+    centerElement: true
+- runFlow: subflows/dismiss-launcher-anr.yaml
 - tapOn: "Run runtime checks"
 - extendedWaitUntil:
     visible: "Plugin version endpoint"

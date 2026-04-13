@@ -3,9 +3,16 @@ name: Convert image from picker
 ---
 - stopApp
 - launchApp
-- extendedWaitUntil:
-    visible: "Load demo image"
-    timeout: 60000
+- runFlow: subflows/ensure-example-app-foreground-android.yaml
+- runFlow: subflows/dismiss-launcher-anr.yaml
+- scrollUntilVisible:
+    element:
+      text: "Load demo image"
+    direction: DOWN
+    timeout: 30000
+    visibilityPercentage: 50
+    centerElement: true
+- runFlow: subflows/dismiss-launcher-anr.yaml
 - tapOn: "Load demo image"
 - extendedWaitUntil:
     visible:
@@ -18,6 +25,7 @@ name: Convert image from picker
     timeout: 10000
     visibilityPercentage: 50
     centerElement: true
+- runFlow: subflows/dismiss-launcher-anr.yaml
 - tapOn:
     text: "Convert image"
 - extendedWaitUntil:

@@ -8,6 +8,7 @@ ARTIFACT_DIR="$OUTPUT_DIR/android-artifacts"
 DRIVER_DIR="${TMPDIR:-/tmp}/maestro-android-driver"
 DEVICE_ID="${ANDROID_SERIAL:-$(adb devices | awk 'NR>1 && $2 == "device" { print $1; exit }')}"
 DRIVER_LOG="$OUTPUT_DIR/android-driver.log"
+USE_MANUAL_DRIVER="${MAESTRO_ANDROID_MANUAL_DRIVER:-0}"
 
 if [[ -z "$DEVICE_ID" ]]; then
   echo "No Android device is available for Maestro."
@@ -21,6 +22,27 @@ fi
 
 mkdir -p "$OUTPUT_DIR" "$ARTIFACT_DIR"
 
+adb -s "$DEVICE_ID" wait-for-device
+adb start-server >/dev/null
+
+run_maestro_tests() {
+  MAESTRO_CLI_NO_ANALYTICS=1 \
+    maestro test \
+      -p android \
+      --device "$DEVICE_ID" \
+      --format junit \
+      --output "$REPORT_PATH" \
+      --test-output-dir "$ARTIFACT_DIR" \
+      "$ROOT_DIR/.maestro/runtime-checks.yaml" \
+      "$ROOT_DIR/.maestro/image-conversion.yaml" \
+      "$ROOT_DIR/.maestro/unsupported-reencode-android.yaml"
+}
+
+if [[ "$USE_MANUAL_DRIVER" != "1" ]]; then
+  run_maestro_tests
+  exit 0
+fi
+
 # Local runs can leave the iOS Maestro runner bound to port 7001.
 pkill -f "maestro-driver-iosUITests-Runner" >/dev/null 2>&1 || true
 
@@ -31,7 +53,6 @@ mkdir -p "$DRIVER_DIR"
   jar xf "$HOME/.maestro/lib/maestro-client.jar" maestro-app.apk maestro-server.apk
 )
 
-adb -s "$DEVICE_ID" wait-for-device
 adb -s "$DEVICE_ID" install -r "$DRIVER_DIR/maestro-app.apk" >/dev/null
 adb -s "$DEVICE_ID" install -r "$DRIVER_DIR/maestro-server.apk" >/dev/null
 adb -s "$DEVICE_ID" shell am force-stop dev.mobile.maestro >/dev/null 2>&1 || true
@@ -67,13 +88,14 @@ adb -s "$DEVICE_ID" forward --remove tcp:7001 >/dev/null 2>&1 || true
 adb -s "$DEVICE_ID" forward tcp:7001 tcp:7001 >/dev/null
 sleep 2
 
-JAVA_TOOL_OPTIONS=-Djava.net.preferIPv4Stack=true maestro test \
-  --no-reinstall-driver \
-  -p android \
-  --device "$DEVICE_ID" \
-  --format junit \
-  --output "$REPORT_PATH" \
-  --test-output-dir "$ARTIFACT_DIR" \
-  "$ROOT_DIR/.maestro/runtime-checks.yaml" \
-  "$ROOT_DIR/.maestro/image-conversion.yaml" \
-  "$ROOT_DIR/.maestro/unsupported-reencode-android.yaml"
+MAESTRO_CLI_NO_ANALYTICS=1 \
+  maestro test \
+    --no-reinstall-driver \
+    -p android \
+    --device "$DEVICE_ID" \
+    --format junit \
+    --output "$REPORT_PATH" \
+    --test-output-dir "$ARTIFACT_DIR" \
+    "$ROOT_DIR/.maestro/runtime-checks.yaml" \
+    "$ROOT_DIR/.maestro/image-conversion.yaml" \
+    "$ROOT_DIR/.maestro/unsupported-reencode-android.yaml"

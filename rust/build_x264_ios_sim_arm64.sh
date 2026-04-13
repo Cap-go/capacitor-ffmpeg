@@ -3,7 +3,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-X264_DIR="$SCRIPT_DIR/x264"
+X264_DIR="$SCRIPT_DIR/rust/x264"
 OUTPUT_DIR="$SCRIPT_DIR/x264-build-ios-sim-arm64"
 
 echo "Building x264 for iOS Simulator ARM64..."

@@ -1,0 +1,7 @@
+appId: app.capgo.ffmpeg
+---
+- runFlow:
+    when:
+      visible: "Pixel Launcher isn't responding"
+    commands:
+      - tapOn: "Wait"
