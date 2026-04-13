@@ -542,10 +542,9 @@ private final class SelfForReencodeVideo {
         }
 
         let asset = AVURLAsset(url: inputURL)
-        guard let audioTrack = asset.tracks(withMediaType: .audio).first else {
+        guard !asset.tracks(withMediaType: .audio).isEmpty else {
             throw FFmpegError.invalidArgument("The input media does not contain an audio track.")
         }
-        _ = audioTrack
 
         let fileManager = FileManager.default
         let outputDirectory = outputURL.deletingLastPathComponent()
@@ -556,9 +555,6 @@ private final class SelfForReencodeVideo {
         let temporaryOutputURL = outputDirectory
             .appendingPathComponent(".ffmpeg-audio-\(UUID().uuidString)")
             .appendingPathExtension(outputURL.pathExtension.isEmpty ? "m4a" : outputURL.pathExtension)
-        defer {
-            try? fileManager.removeItem(at: temporaryOutputURL)
-        }
 
         guard let exportSession = audioExportSessionFactory(asset, AVAssetExportPresetAppleM4A) else {
             throw FFmpegError.transcodeFailed("Could not create the audio export session.")
@@ -568,6 +564,10 @@ private final class SelfForReencodeVideo {
         exportSession.outputFileType = .m4a
 
         exportSession.exportAsynchronously {
+            defer {
+                try? fileManager.removeItem(at: temporaryOutputURL)
+            }
+
             do {
                 guard exportSession.status == .completed else {
                     throw FFmpegError.transcodeFailed(
