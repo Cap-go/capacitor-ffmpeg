@@ -23,7 +23,7 @@ export interface FFmpegCapabilitiesFeatures {
   getCapabilities: FFmpegCapability;
   reencodeVideo: FFmpegCapability;
   convertImage: FFmpegCapability;
-  convertAudio: FFmpegCapability;
+  convertAudio?: FFmpegCapability;
   progressEvents: FFmpegCapability;
   probeMedia: FFmpegCapability;
   generateThumbnail: FFmpegCapability;
@@ -128,7 +128,7 @@ export interface CapacitorFFmpegPlugin extends Plugin {
    * iOS currently supports `m4a`.
    * Android and web currently reject with `UNIMPLEMENTED`.
    */
-  convertAudio(options: ConvertAudioOptions): Promise<ConvertAudioResult>;
+  convertAudio?(options: ConvertAudioOptions): Promise<ConvertAudioResult>;
 
   /**
    * Listen for media job progress.
