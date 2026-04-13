@@ -19,6 +19,7 @@
     "sync:android": "bunx cap sync android && bun scripts/fix-android-plugin-link.mjs",
     "sync:ios": "bunx cap sync ios",
     "maestro:android": "./scripts/run-maestro-android.sh",
+    "maestro:android:ci": "./scripts/run-maestro-android-ci.sh",
     "maestro:ios": "./scripts/run-maestro-ios.sh"
   },
   "dependencies": {

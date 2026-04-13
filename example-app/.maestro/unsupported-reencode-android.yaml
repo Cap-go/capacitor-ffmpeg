@@ -3,13 +3,28 @@ name: Verify unsupported Android re-encode contract
 ---
 - stopApp
 - launchApp
-- extendedWaitUntil:
-    visible: "FFmpeg capability playground"
+- runFlow: subflows/ensure-example-app-foreground-android.yaml
+- runFlow: subflows/dismiss-launcher-anr.yaml
+- scrollUntilVisible:
+    element:
+      text: "Show video workflow"
+    direction: DOWN
     timeout: 30000
+    visibilityPercentage: 50
+    centerElement: true
+- runFlow: subflows/ensure-example-app-foreground-android.yaml
+- scrollUntilVisible:
+    element:
+      text: "Show video workflow"
+    direction: DOWN
+    timeout: 30000
+    visibilityPercentage: 50
+    centerElement: true
 - tapOn: "Show video workflow"
 - extendedWaitUntil:
     visible: "Verify unsupported path"
     timeout: 30000
+- runFlow: subflows/dismiss-launcher-anr.yaml
 - tapOn: "Verify unsupported path"
 - extendedWaitUntil:
     visible: "Unsupported re-encode smoke test"
