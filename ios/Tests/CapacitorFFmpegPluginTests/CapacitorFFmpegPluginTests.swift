@@ -239,9 +239,10 @@ final class CapacitorFFmpegPluginTests: XCTestCase {
         try Data("stale".utf8).write(to: outputURL)
 
         let exportSession = MockAudioExportSession { session in
-            XCTAssertEqual(session.outputURL, outputURL)
+            XCTAssertNotEqual(session.outputURL, outputURL)
+            XCTAssertEqual(session.outputURL?.deletingLastPathComponent(), outputURL.deletingLastPathComponent())
             XCTAssertEqual(session.outputFileType, .m4a)
-            try? Data("converted-audio".utf8).write(to: outputURL)
+            try? Data("converted-audio".utf8).write(to: XCTUnwrap(session.outputURL))
             session.status = .completed
         }
 
@@ -269,6 +270,7 @@ final class CapacitorFFmpegPluginTests: XCTestCase {
         let inputURL = baseURL.appendingPathComponent("input.wav")
         let outputURL = baseURL.appendingPathComponent("output.m4a")
         try writeToneWav(to: inputURL)
+        try Data("keep-existing-output".utf8).write(to: outputURL)
 
         let exportError = NSError(
             domain: "CapacitorFFmpegPluginTests",
@@ -276,8 +278,8 @@ final class CapacitorFFmpegPluginTests: XCTestCase {
             userInfo: [NSLocalizedDescriptionKey: "simulated export failure"]
         )
         let exportSession = MockAudioExportSession(status: .failed, error: exportError) { session in
-            XCTAssertEqual(session.outputURL, outputURL)
-            try? Data("partial-output".utf8).write(to: outputURL)
+            XCTAssertNotEqual(session.outputURL, outputURL)
+            try? Data("partial-output".utf8).write(to: XCTUnwrap(session.outputURL))
         }
 
         XCTAssertThrowsError(
@@ -289,6 +291,38 @@ final class CapacitorFFmpegPluginTests: XCTestCase {
         ) { error in
             XCTAssertEqual((error as? FFmpegError)?.code, "TRANSCODE_FAILED")
             XCTAssertEqual(error.localizedDescription, "Media transcode failed: simulated export failure")
+        }
+
+        XCTAssertEqual(try String(contentsOf: outputURL), "keep-existing-output")
+    }
+
+    func testConvertAudioRemovesPartialTemporaryOutputWhenNoDestinationExists() throws {
+        let fileManager = FileManager.default
+        let baseURL = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fileManager.createDirectory(at: baseURL, withIntermediateDirectories: true)
+        defer { try? fileManager.removeItem(at: baseURL) }
+
+        let inputURL = baseURL.appendingPathComponent("input.wav")
+        let outputURL = baseURL.appendingPathComponent("output.m4a")
+        try writeToneWav(to: inputURL)
+
+        let exportError = NSError(
+            domain: "CapacitorFFmpegPluginTests",
+            code: 2,
+            userInfo: [NSLocalizedDescriptionKey: "simulated export failure"]
+        )
+        let exportSession = MockAudioExportSession(status: .failed, error: exportError) { session in
+            try? Data("partial-output".utf8).write(to: XCTUnwrap(session.outputURL))
+        }
+
+        XCTAssertThrowsError(
+            try CapacitorFFmpeg(audioExportSessionFactory: { _, _ in exportSession }).convertAudio(
+                inputPath: inputURL.path,
+                outputPath: outputURL.path,
+                format: "m4a"
+            )
+        ) { error in
+            XCTAssertEqual((error as? FFmpegError)?.code, "TRANSCODE_FAILED")
         }
 
         XCTAssertFalse(fileManager.fileExists(atPath: outputURL.path))

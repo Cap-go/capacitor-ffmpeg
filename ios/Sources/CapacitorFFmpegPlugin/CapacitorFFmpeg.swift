@@ -547,15 +547,18 @@ private final class SelfForReencodeVideo {
             at: outputDirectory,
             withIntermediateDirectories: true
         )
-
-        if fileManager.fileExists(atPath: outputURL.path) {
-            try fileManager.removeItem(at: outputURL)
+        let temporaryOutputURL = outputDirectory
+            .appendingPathComponent(".ffmpeg-audio-\(UUID().uuidString)")
+            .appendingPathExtension(outputURL.pathExtension.isEmpty ? "m4a" : outputURL.pathExtension)
+        defer {
+            try? fileManager.removeItem(at: temporaryOutputURL)
         }
+
         guard let exportSession = audioExportSessionFactory(asset, AVAssetExportPresetAppleM4A) else {
             throw FFmpegError.transcodeFailed("Could not create the audio export session.")
         }
 
-        exportSession.outputURL = outputURL
+        exportSession.outputURL = temporaryOutputURL
         exportSession.outputFileType = .m4a
 
         let semaphore = DispatchSemaphore(value: 0)
@@ -565,10 +568,15 @@ private final class SelfForReencodeVideo {
         semaphore.wait()
 
         guard exportSession.status == .completed else {
-            try? fileManager.removeItem(at: outputURL)
             throw FFmpegError.transcodeFailed(
                 exportSession.error?.localizedDescription ?? "Could not export the output audio."
             )
+        }
+
+        if fileManager.fileExists(atPath: outputURL.path) {
+            _ = try fileManager.replaceItemAt(outputURL, withItemAt: temporaryOutputURL)
+        } else {
+            try fileManager.moveItem(at: temporaryOutputURL, to: outputURL)
         }
 
         return FFmpegConvertedAudio(
