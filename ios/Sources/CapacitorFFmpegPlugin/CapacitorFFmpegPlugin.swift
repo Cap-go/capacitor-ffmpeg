@@ -13,6 +13,7 @@ public class CapacitorFFmpegPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "getCapabilities", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "reencodeVideo", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "convertImage", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "convertAudio", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getPluginVersion", returnType: CAPPluginReturnPromise)
     ]
 
@@ -100,6 +101,33 @@ public class CapacitorFFmpegPlugin: CAPPlugin, CAPBridgedPlugin {
                 outputPath: outputPath,
                 format: format,
                 quality: quality
+            )
+
+            call.resolve(result.asDictionary)
+        } catch {
+            reject(call, with: error)
+        }
+    }
+
+    @objc func convertAudio(_ call: CAPPluginCall) {
+        guard let inputPath = call.getString("inputPath") else {
+            call.reject("Input path is required", "INVALID_ARGUMENT")
+            return
+        }
+        guard let outputPath = call.getString("outputPath") else {
+            call.reject("Output path is required", "INVALID_ARGUMENT")
+            return
+        }
+        guard let format = call.getString("format") else {
+            call.reject("Output format is required", "INVALID_ARGUMENT")
+            return
+        }
+
+        do {
+            let result = try implementation.convertAudio(
+                inputPath: inputPath,
+                outputPath: outputPath,
+                format: format
             )
 
             call.resolve(result.asDictionary)

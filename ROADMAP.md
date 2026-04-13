@@ -1,18 +1,18 @@
 # Capacitor FFmpeg Roadmap
 
-Last updated: 2026-04-04
+Last updated: 2026-04-13
 Status: active planning
 
 ## Why this file exists
 
 This plugin is currently much smaller than FFmpeg itself:
 
-- The TypeScript API exposes `getCapabilities()`, `reencodeVideo()`, `convertImage()`, a `progress` event, and `getPluginVersion()`.
+- The TypeScript API exposes `getCapabilities()`, `reencodeVideo()`, `convertImage()`, `convertAudio()`, a `progress` event, and `getPluginVersion()`.
 - The Rust core currently focuses on one video re-encode path: decode video, encode H.264, and copy non-video streams.
-- iOS has the only real native media implementation today.
-- Android exposes `getPluginVersion()`, `getCapabilities()`, and `convertImage()`.
+- iOS has the only real native media implementation today, including still-image conversion and a first audio-conversion path.
+- Android exposes `getPluginVersion()`, `getCapabilities()`, `convertImage()`, and an explicit `convertAudio()` contract that still rejects with `UNIMPLEMENTED`.
 - Web is a stub.
-- The test suite now covers basic wrapper contracts, but not media regressions yet.
+- The test suite now covers basic wrapper contracts plus iOS image and audio helper flows, but not full media regressions yet.
 
 This roadmap is the living source of truth for how we expand the plugin safely, how we test it, and how we keep its scope realistic.
 
@@ -47,15 +47,15 @@ The right goal is a well-documented, well-tested mobile subset of FFmpeg, with a
 
 ## Current baseline
 
-| Area      | Current state                                                      | Main gap                                                                                  |
-| --------- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
-| JS API    | `getCapabilities`, `reencodeVideo`, `progress`, `getPluginVersion` | No probe, trim, remux, thumbnails, extract-audio, cancel, or cross-platform job execution |
-| Rust core | One re-encode flow with progress callback                          | No unit tests, no fixture suite, no stable result model, no broader operation set         |
-| iOS       | Real implementation exists                                         | Tied to a narrow workflow and limited test coverage                                       |
-| Android   | Version method only                                                | No media engine, no API parity                                                            |
-| Web       | Stub                                                               | No documented support story                                                               |
-| Tests     | Basic web/iOS/Android contract tests                               | No media fixture coverage, no Rust regressions, and no end-to-end flows                   |
-| Docs      | README documents support and roadmap links                         | No generated API docs yet for planned operations and no capability matrix by phase        |
+| Area      | Current state                                                                                      | Main gap                                                                                 |
+| --------- | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| JS API    | `getCapabilities`, `reencodeVideo`, `convertImage`, `convertAudio`, `progress`, `getPluginVersion` | No probe, trim, remux, thumbnails, extract-audio, cancel, or cross-platform media parity |
+| Rust core | One re-encode flow with progress callback                                                          | No unit tests, no fixture suite, no stable result model, no broader operation set        |
+| iOS       | Real implementation exists for video, image, and limited audio conversion                          | Still tied to narrow workflows and lacks real end-to-end regression fixtures             |
+| Android   | Native image conversion plus explicit unsupported contracts for broader media APIs                 | No media engine parity for audio or video workflows                                      |
+| Web       | Stub                                                                                               | No documented support story                                                              |
+| Tests     | Basic web/iOS/Android contract tests plus iOS image/audio helper tests                             | No media fixture coverage, no Rust regressions, and no end-to-end flows                  |
+| Docs      | README documents support and roadmap links                                                         | No capability matrix by release phase and limited examples for new media operations      |
 
 ## Scope model
 
@@ -160,6 +160,7 @@ Exit criteria:
 Status: in progress
 
 - Stabilize the current re-encode path.
+- Harden the initial `convertAudio()` path and keep its scope explicit until broader format support is real.
 - Add structured progress and cancellation semantics.
 - Clarify background execution behavior and platform minimums.
 - Add real iOS native tests using media fixtures.

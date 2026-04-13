@@ -11,6 +11,7 @@ export type FFmpegCapabilityStatus = 'available' | 'experimental' | 'unimplement
 export type FFmpegJobState = 'queued' | 'running' | 'completed' | 'failed';
 export type FFmpegProgressState = 'running' | 'completed' | 'failed';
 export type ImageOutputFormat = 'webp' | 'jpeg' | 'png';
+export type AudioOutputFormat = 'm4a';
 
 export interface FFmpegCapability {
   status: FFmpegCapabilityStatus;
@@ -22,6 +23,7 @@ export interface FFmpegCapabilitiesFeatures {
   getCapabilities: FFmpegCapability;
   reencodeVideo: FFmpegCapability;
   convertImage: FFmpegCapability;
+  convertAudio: FFmpegCapability;
   progressEvents: FFmpegCapability;
   probeMedia: FFmpegCapability;
   generateThumbnail: FFmpegCapability;
@@ -63,6 +65,17 @@ export interface FFmpegAcceptedJob {
 export interface ConvertImageResult {
   outputPath: string;
   format: ImageOutputFormat;
+}
+
+export interface ConvertAudioOptions {
+  inputPath: string;
+  outputPath: string;
+  format: AudioOutputFormat;
+}
+
+export interface ConvertAudioResult {
+  outputPath: string;
+  format: AudioOutputFormat;
 }
 
 export interface FFmpegProgressEvent {
@@ -108,6 +121,14 @@ export interface CapacitorFFmpegPlugin extends Plugin {
    * Web currently rejects with `UNIMPLEMENTED`.
    */
   convertImage(options: ConvertImageOptions): Promise<ConvertImageResult>;
+
+  /**
+   * Convert audio into another container or codec.
+   *
+   * iOS currently supports `m4a`.
+   * Android and web currently reject with `UNIMPLEMENTED`.
+   */
+  convertAudio(options: ConvertAudioOptions): Promise<ConvertAudioResult>;
 
   /**
    * Listen for media job progress.

@@ -1,3 +1,4 @@
+import AVFoundation
 import CapacitorFFmpegNativeCore
 import Darwin
 import UIKit
@@ -39,6 +40,42 @@ private struct FailingFFmpegNativeBindings: FFmpegNativeBinding {
     }
 }
 
+private final class MockAudioExportSession: AudioExportSessioning {
+    var outputURL: URL?
+    var outputFileType: AVFileType?
+    var status: AVAssetExportSession.Status
+    var error: Error?
+
+    private let onExport: (MockAudioExportSession) -> Void
+
+    init(
+        status: AVAssetExportSession.Status = .completed,
+        error: Error? = nil,
+        onExport: @escaping (MockAudioExportSession) -> Void = { _ in }
+    ) {
+        self.status = status
+        self.error = error
+        self.onExport = onExport
+    }
+
+    func exportAsynchronously(completionHandler handler: @escaping @Sendable () -> Void) {
+        onExport(self)
+        handler()
+    }
+}
+
+private func writeToneWav(to url: URL) throws {
+    let toneFormat = try XCTUnwrap(AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 1))
+    let toneFile = try AVAudioFile(forWriting: url, settings: toneFormat.settings)
+    let toneBuffer = try XCTUnwrap(AVAudioPCMBuffer(pcmFormat: toneFormat, frameCapacity: 44_100))
+    toneBuffer.frameLength = 44_100
+    let samples = try XCTUnwrap(toneBuffer.floatChannelData?[0])
+    for index in 0..<Int(toneBuffer.frameLength) {
+        samples[index] = Float(sin(2.0 * .pi * 440.0 * Double(index) / 44_100.0))
+    }
+    try toneFile.write(from: toneBuffer)
+}
+
 final class CapacitorFFmpegPluginTests: XCTestCase {
     func testCapabilitiesPayloadDescribesTheCurrentIosScope() {
         let payload = CapacitorFFmpeg().getCapabilities().asDictionary
@@ -48,6 +85,7 @@ final class CapacitorFFmpegPluginTests: XCTestCase {
         XCTAssertEqual(features?["getCapabilities"]?["status"] as? String, "available")
         XCTAssertEqual(features?["reencodeVideo"]?["status"] as? String, "experimental")
         XCTAssertEqual(features?["convertImage"]?["status"] as? String, "available")
+        XCTAssertEqual(features?["convertAudio"]?["status"] as? String, "available")
     }
 
     func testCapabilitiesPayloadExplainsNativeCoreInitializationFailure() {
@@ -139,10 +177,10 @@ final class CapacitorFFmpegPluginTests: XCTestCase {
     }
 
     func testConvertImageWritesAnOutputFile() throws {
-        let fm = FileManager.default
-        let baseURL = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try fm.createDirectory(at: baseURL, withIntermediateDirectories: true)
-        defer { try? fm.removeItem(at: baseURL) }
+        let fileManager = FileManager.default
+        let baseURL = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fileManager.createDirectory(at: baseURL, withIntermediateDirectories: true)
+        defer { try? fileManager.removeItem(at: baseURL) }
 
         let inputURL = baseURL.appendingPathComponent("input.png")
         let outputURL = baseURL.appendingPathComponent("output.png")
@@ -163,6 +201,96 @@ final class CapacitorFFmpegPluginTests: XCTestCase {
 
         XCTAssertEqual(result.format, "png")
         XCTAssertEqual(result.outputPath, outputURL.absoluteString)
-        XCTAssertTrue(fm.fileExists(atPath: outputURL.path))
+        XCTAssertTrue(fileManager.fileExists(atPath: outputURL.path))
+    }
+
+    func testConvertAudioRejectsUnsupportedFormats() throws {
+        let fileManager = FileManager.default
+        let baseURL = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fileManager.createDirectory(at: baseURL, withIntermediateDirectories: true)
+        defer { try? fileManager.removeItem(at: baseURL) }
+
+        let inputURL = baseURL.appendingPathComponent("input.wav")
+        let outputURL = baseURL.appendingPathComponent("output.wav")
+
+        try writeToneWav(to: inputURL)
+
+        XCTAssertThrowsError(
+            try CapacitorFFmpeg().convertAudio(
+                inputPath: inputURL.path,
+                outputPath: outputURL.path,
+                format: "wav"
+            )
+        ) { error in
+            XCTAssertEqual((error as? FFmpegError)?.code, "INVALID_ARGUMENT")
+            XCTAssertEqual(error.localizedDescription, "Unsupported audio format: wav")
+        }
+    }
+
+    func testConvertAudioWritesM4AOutputWhenExportSucceeds() throws {
+        let fileManager = FileManager.default
+        let baseURL = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fileManager.createDirectory(at: baseURL, withIntermediateDirectories: true)
+        defer { try? fileManager.removeItem(at: baseURL) }
+
+        let inputURL = baseURL.appendingPathComponent("input.wav")
+        let outputURL = baseURL.appendingPathComponent("output.m4a")
+        try writeToneWav(to: inputURL)
+        try Data("stale".utf8).write(to: outputURL)
+
+        let exportSession = MockAudioExportSession { session in
+            XCTAssertEqual(session.outputURL, outputURL)
+            XCTAssertEqual(session.outputFileType, .m4a)
+            try? Data("converted-audio".utf8).write(to: outputURL)
+            session.status = .completed
+        }
+
+        let result = try CapacitorFFmpeg(audioExportSessionFactory: { asset, presetName in
+            XCTAssertEqual(asset.tracks(withMediaType: .audio).count, 1)
+            XCTAssertEqual(presetName, AVAssetExportPresetAppleM4A)
+            return exportSession
+        }).convertAudio(
+            inputPath: inputURL.path,
+            outputPath: outputURL.path,
+            format: "m4a"
+        )
+
+        XCTAssertEqual(result.format, "m4a")
+        XCTAssertEqual(result.outputPath, outputURL.absoluteString)
+        XCTAssertEqual(try String(contentsOf: outputURL), "converted-audio")
+    }
+
+    func testConvertAudioRemovesPartialOutputWhenExportFails() throws {
+        let fileManager = FileManager.default
+        let baseURL = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fileManager.createDirectory(at: baseURL, withIntermediateDirectories: true)
+        defer { try? fileManager.removeItem(at: baseURL) }
+
+        let inputURL = baseURL.appendingPathComponent("input.wav")
+        let outputURL = baseURL.appendingPathComponent("output.m4a")
+        try writeToneWav(to: inputURL)
+
+        let exportError = NSError(
+            domain: "CapacitorFFmpegPluginTests",
+            code: 1,
+            userInfo: [NSLocalizedDescriptionKey: "simulated export failure"]
+        )
+        let exportSession = MockAudioExportSession(status: .failed, error: exportError) { session in
+            XCTAssertEqual(session.outputURL, outputURL)
+            try? Data("partial-output".utf8).write(to: outputURL)
+        }
+
+        XCTAssertThrowsError(
+            try CapacitorFFmpeg(audioExportSessionFactory: { _, _ in exportSession }).convertAudio(
+                inputPath: inputURL.path,
+                outputPath: outputURL.path,
+                format: "m4a"
+            )
+        ) { error in
+            XCTAssertEqual((error as? FFmpegError)?.code, "TRANSCODE_FAILED")
+            XCTAssertEqual(error.localizedDescription, "Media transcode failed: simulated export failure")
+        }
+
+        XCTAssertFalse(fileManager.fileExists(atPath: outputURL.path))
     }
 }

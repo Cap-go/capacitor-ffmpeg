@@ -91,6 +91,11 @@ public class CapacitorFFmpegPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void convertAudio(final PluginCall call) {
+        call.unimplemented(getUnsupportedOperationMessage("convertAudio"));
+    }
+
+    @PluginMethod
     public void getPluginVersion(final PluginCall call) {
         try {
             call.resolve(createVersionPayload());
@@ -118,6 +123,7 @@ public class CapacitorFFmpegPlugin extends Plugin {
         features.put("getCapabilities", createCapabilityPayload("getCapabilities"));
         features.put("reencodeVideo", createCapabilityPayload("reencodeVideo"));
         features.put("convertImage", createCapabilityPayload("convertImage"));
+        features.put("convertAudio", createCapabilityPayload("convertAudio"));
         features.put("progressEvents", createCapabilityPayload("progressEvents"));
         features.put("probeMedia", createCapabilityPayload("probeMedia"));
         features.put("generateThumbnail", createCapabilityPayload("generateThumbnail"));
@@ -150,6 +156,7 @@ public class CapacitorFFmpegPlugin extends Plugin {
             case "getPluginVersion", "getCapabilities" -> "available";
             case "reencodeVideo" -> "unimplemented";
             case "convertImage" -> "available";
+            case "convertAudio" -> "unimplemented";
             case "progressEvents" -> "unavailable";
             case "probeMedia", "generateThumbnail", "extractAudio", "remux", "trim" -> "unimplemented";
             default -> "unimplemented";
@@ -160,6 +167,7 @@ public class CapacitorFFmpegPlugin extends Plugin {
         return switch (feature) {
             case "reencodeVideo" -> getUnsupportedOperationMessage("reencodeVideo");
             case "convertImage" -> "Still-image conversion is available on Android for webp, jpeg, and png outputs.";
+            case "convertAudio" -> getUnsupportedOperationMessage("convertAudio");
             case "progressEvents" -> "No media jobs are available on Android today.";
             case "probeMedia" -> "probeMedia is not implemented on Android.";
             case "generateThumbnail" -> "generateThumbnail is not implemented on Android.";
