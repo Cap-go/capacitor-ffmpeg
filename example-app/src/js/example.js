@@ -1,3 +1,5 @@
+import { CapacitorUpdater } from '@capgo/capacitor-updater';
+import { Capacitor } from '@capacitor/core';
 import { CapacitorFFmpeg } from '@capgo/capacitor-ffmpeg';
 import { Directory, Filesystem } from '@capacitor/filesystem';
 
@@ -27,4 +29,10 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', mount, { once: true });
 } else {
   mount();
+}
+
+if (Capacitor.isNativePlatform()) {
+  CapacitorUpdater.notifyAppReady().catch((error) => {
+    console.error('Capgo notifyAppReady failed', error);
+  });
 }
