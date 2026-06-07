@@ -11,14 +11,12 @@ const rootPackageJson = JSON.parse(readFileSync(resolve(repoRoot, 'package.json'
 const examplePackageJson = JSON.parse(readFileSync(resolve(appDir, 'package.json'), 'utf8'));
 const tsConfigPath = resolve(appDir, 'capacitor.config.ts');
 const jsonConfigPath = resolve(appDir, 'capacitor.config.json');
-const configPath = existsSync(tsConfigPath)
-  ? tsConfigPath
-  : existsSync(jsonConfigPath)
-    ? jsonConfigPath
-    : null;
+const configPath = existsSync(tsConfigPath) ? tsConfigPath : existsSync(jsonConfigPath) ? jsonConfigPath : null;
 
 if (!configPath) {
-  console.error('Missing Capacitor config. Expected example-app/capacitor.config.ts or example-app/capacitor.config.json.');
+  console.error(
+    'Missing Capacitor config. Expected example-app/capacitor.config.ts or example-app/capacitor.config.json.',
+  );
   process.exit(1);
 }
 
@@ -68,7 +66,9 @@ if (!existsSync(distDir)) {
 }
 
 if (!bundle) {
-  console.error('Missing Capgo bundle version. Set CAPGO_BUNDLE or add a version to example-app/package.json or package.json.');
+  console.error(
+    'Missing Capgo bundle version. Set CAPGO_BUNDLE or add a version to example-app/package.json or package.json.',
+  );
   process.exit(1);
 }
 
