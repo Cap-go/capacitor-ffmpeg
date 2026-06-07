@@ -43,7 +43,7 @@ jobs:
         with:
           ref: ${{ github.event.release.tag_name || github.ref }}
           fetch-depth: 0
-          filter: blob:none
+          lfs: true
           persist-credentials: false
 
       - name: Setup bun
