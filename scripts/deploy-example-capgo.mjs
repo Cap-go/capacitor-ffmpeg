@@ -54,9 +54,7 @@ function usableVersion(version) {
 }
 
 const bundle =
-  process.env.CAPGO_BUNDLE ||
-  usableVersion(examplePackageJson.version) ||
-  usableVersion(rootPackageJson.version);
+  process.env.CAPGO_BUNDLE || usableVersion(examplePackageJson.version) || usableVersion(rootPackageJson.version);
 const comment =
   process.env.CAPGO_COMMENT ||
   (process.env.GITHUB_RUN_NUMBER ? `${appName} run ${process.env.GITHUB_RUN_NUMBER}` : `${appName} ${bundle}`);
