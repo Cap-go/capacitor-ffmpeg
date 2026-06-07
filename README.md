@@ -1,6 +1,11 @@
 # @capgo/capacitor-ffmpeg
 
-<a href="https://capgo.app/"><img src="https://capgo.app/readme-banner.svg?repo=Cap-go/capacitor-ffmpeg" alt="Capgo - Instant updates for Capacitor" /></a>
+<a href="https://capgo.app/">
+  <img
+    src="https://capgo.app/readme-banner.svg?repo=Cap-go/capacitor-ffmpeg"
+    alt="Capgo - Instant updates for Capacitor"
+  />
+</a>
 
 <div align="center">
   <h2>
