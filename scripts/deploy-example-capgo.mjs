@@ -94,7 +94,6 @@ if (channel === 'production') {
 }
 runCapgo(channelArgs, true);
 
-
 runCapgo([
   'bundle',
   'upload',
