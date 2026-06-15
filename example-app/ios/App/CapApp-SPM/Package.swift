@@ -13,7 +13,9 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", exact: "8.0.0"),
         .package(name: "CapacitorFilesystem", path: "../../../node_modules/.bun/@capacitor+filesystem@8.1.2+15e98482558ccfe6/node_modules/@capacitor/filesystem"),
-        .package(name: "CapgoCapacitorFfmpeg", path: "../../../node_modules/.bun/@capgo+capacitor-ffmpeg@file+../node_modules/@capgo/capacitor-ffmpeg")
+        .package(name: "CapgoCapacitorFfmpeg", path: "../../../node_modules/.bun/@capgo+capacitor-ffmpeg@file+../node_modules/@capgo/capacitor-ffmpeg"),
+        .package(name: "CapgoCapacitorUpdater", path: "../../../node_modules/.bun/@capgo+capacitor-updater@8.47.10+15e98482558ccfe6/node_modules/@capgo/capacitor-updater"),
+        .package(name: "CapacitorSplashScreen", path: "../../../node_modules/.bun/@capacitor+splash-screen@8.0.1+15e98482558ccfe6/node_modules/@capacitor/splash-screen")
     ],
     targets: [
         .target(
@@ -22,7 +24,9 @@ let package = Package(
                 .product(name: "Capacitor", package: "capacitor-swift-pm"),
                 .product(name: "Cordova", package: "capacitor-swift-pm"),
                 .product(name: "CapacitorFilesystem", package: "CapacitorFilesystem"),
-                .product(name: "CapgoCapacitorFfmpeg", package: "CapgoCapacitorFfmpeg")
+                .product(name: "CapgoCapacitorFfmpeg", package: "CapgoCapacitorFfmpeg"),
+                .product(name: "CapgoCapacitorUpdater", package: "CapgoCapacitorUpdater"),
+                .product(name: "CapacitorSplashScreen", package: "CapacitorSplashScreen")
             ]
         )
     ]
