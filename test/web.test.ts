@@ -37,7 +37,7 @@ describe('CapacitorFFmpegWeb', () => {
       }),
     ).rejects.toMatchObject({
       code: ExceptionCode.Unimplemented,
-      message: 'reencodeVideo is currently only available on iOS.',
+      message: 'reencodeVideo is not available on web.',
     });
 
     await expect(

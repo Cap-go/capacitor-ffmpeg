@@ -3,6 +3,7 @@ package ee.forgr.capacitor_ffmpeg;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.net.Uri;
 import android.os.Build;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -14,6 +15,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Locale;
+import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @CapacitorPlugin(name = "CapacitorFFmpeg")
 public class CapacitorFFmpegPlugin extends Plugin {
@@ -27,9 +31,108 @@ public class CapacitorFFmpegPlugin extends Plugin {
         }
     }
 
+    private final ExecutorService reencodeExecutor = Executors.newSingleThreadExecutor();
+    private final AndroidVideoReencoder videoReencoder = new AndroidVideoReencoder();
+
     @PluginMethod
     public void reencodeVideo(final PluginCall call) {
-        call.unimplemented(getUnsupportedOperationMessage("reencodeVideo"));
+        final String inputPath = call.getString("inputPath");
+        final String outputPath = call.getString("outputPath");
+        final Integer width = call.getInt("width");
+        final Integer height = call.getInt("height");
+        final Integer bitrate = call.getInt("bitrate", 0);
+
+        if (inputPath == null || inputPath.trim().isEmpty()) {
+            call.reject("Input path is required", "INVALID_ARGUMENT");
+            return;
+        }
+        if (outputPath == null || outputPath.trim().isEmpty()) {
+            call.reject("Output path is required", "INVALID_ARGUMENT");
+            return;
+        }
+        if (width == null || width <= 0) {
+            call.reject("Width must be greater than 0", "INVALID_ARGUMENT");
+            return;
+        }
+        if (height == null || height <= 0) {
+            call.reject("Height must be greater than 0", "INVALID_ARGUMENT");
+            return;
+        }
+        if (bitrate != null && bitrate < 0) {
+            call.reject("Bitrate must be greater than or equal to 0", "INVALID_ARGUMENT");
+            return;
+        }
+
+        try {
+            final File inputFile = resolveFilesystemPath(inputPath);
+            final File outputFile = resolveFilesystemPath(outputPath);
+
+            if (!inputFile.isFile()) {
+                call.reject("Input video not found: " + inputFile.getAbsolutePath(), "INVALID_ARGUMENT");
+                return;
+            }
+
+            if (inputFile.getCanonicalFile().equals(outputFile.getCanonicalFile())) {
+                call.reject("In-place conversion is not allowed. Choose a different output path.", "INVALID_ARGUMENT");
+                return;
+            }
+
+            final String jobId = UUID.randomUUID().toString();
+            final String resolvedOutputPath = Uri.fromFile(outputFile).toString();
+            final int resolvedBitrate = AndroidVideoReencoder.resolveBitrate(bitrate);
+
+            final JSObject acceptedJob = new JSObject();
+            acceptedJob.put("jobId", jobId);
+            acceptedJob.put("status", "queued");
+            call.resolve(acceptedJob);
+
+            reencodeExecutor.execute(() -> {
+                try {
+                    videoReencoder.reencode(
+                        getContext(),
+                        inputFile,
+                        outputFile,
+                        width,
+                        height,
+                        resolvedBitrate,
+                        (progress, state, message) -> emitReencodeProgress(jobId, resolvedOutputPath, progress, state, message)
+                    );
+                } catch (final Exception exception) {
+                    emitReencodeProgress(
+                        jobId,
+                        resolvedOutputPath,
+                        0.0,
+                        "failed",
+                        exception.getMessage() != null ? exception.getMessage() : "Could not re-encode the input video."
+                    );
+                }
+            });
+        } catch (final IllegalArgumentException exception) {
+            call.reject(exception.getMessage(), "INVALID_ARGUMENT", exception);
+        } catch (final IOException exception) {
+            call.reject("Could not prepare video re-encode", "TRANSCODE_FAILED", exception);
+        }
+    }
+
+    void emitReencodeProgress(
+        final String jobId,
+        final String outputPath,
+        final double progress,
+        final String state,
+        final String message
+    ) {
+        final JSObject event = new JSObject();
+        event.put("jobId", jobId);
+        event.put("fileId", jobId);
+        event.put("progress", progress);
+        event.put("state", state);
+        if (message != null) {
+            event.put("message", message);
+        }
+        if (outputPath != null) {
+            event.put("outputPath", outputPath);
+        }
+        notifyListeners("progress", event);
     }
 
     @PluginMethod
@@ -154,10 +257,10 @@ public class CapacitorFFmpegPlugin extends Plugin {
     String getCapabilityStatus(final String feature) {
         return switch (feature) {
             case "getPluginVersion", "getCapabilities" -> "available";
-            case "reencodeVideo" -> "unimplemented";
+            case "reencodeVideo" -> "experimental";
             case "convertImage" -> "available";
             case "convertAudio" -> "unimplemented";
-            case "progressEvents" -> "unavailable";
+            case "progressEvents" -> "available";
             case "probeMedia", "generateThumbnail", "extractAudio", "remux", "trim" -> "unimplemented";
             default -> "unimplemented";
         };
@@ -165,10 +268,10 @@ public class CapacitorFFmpegPlugin extends Plugin {
 
     String getCapabilityReason(final String feature) {
         return switch (feature) {
-            case "reencodeVideo" -> getUnsupportedOperationMessage("reencodeVideo");
+            case "reencodeVideo" -> "H.264 video re-encode with Media3 Transformer on Android.";
             case "convertImage" -> "Still-image conversion is available on Android for webp, jpeg, and png outputs.";
             case "convertAudio" -> getUnsupportedOperationMessage("convertAudio");
-            case "progressEvents" -> "No media jobs are available on Android today.";
+            case "progressEvents" -> "Progress events are emitted for accepted reencode jobs.";
             case "probeMedia" -> "probeMedia is not implemented on Android.";
             case "generateThumbnail" -> "generateThumbnail is not implemented on Android.";
             case "extractAudio" -> "extractAudio is not implemented on Android.";
