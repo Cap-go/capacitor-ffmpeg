@@ -115,7 +115,8 @@ export interface CapacitorFFmpegPlugin extends Plugin {
    * On iOS, the returned promise resolves when the native layer accepts the job.
    * Final success or failure is delivered through the `progress` listener.
    *
-   * Android and web currently reject with `UNIMPLEMENTED`.
+   * Android accepts a queued job and reports lifecycle via `progress`.
+   * Web currently rejects with `UNIMPLEMENTED`.
    */
   reencodeVideo(options: ReencodeVideoOptions): Promise<FFmpegAcceptedJob>;
 

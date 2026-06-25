@@ -32,7 +32,7 @@ public class CapacitorFFmpegPluginTest {
     public void unsupportedOperationMessageExplainsTheCurrentPlatformScope() {
         final CapacitorFFmpegPlugin plugin = new CapacitorFFmpegPlugin();
 
-        assertEquals("reencodeVideo is currently only available on iOS.", plugin.getUnsupportedOperationMessage("reencodeVideo"));
+        assertEquals("convertAudio is currently only available on iOS.", plugin.getUnsupportedOperationMessage("convertAudio"));
     }
 
     @Test
@@ -41,10 +41,10 @@ public class CapacitorFFmpegPluginTest {
 
         assertEquals("android", plugin.getPlatformName());
         assertEquals("available", plugin.getCapabilityStatus("getCapabilities"));
-        assertEquals("unimplemented", plugin.getCapabilityStatus("reencodeVideo"));
+        assertEquals("experimental", plugin.getCapabilityStatus("reencodeVideo"));
         assertEquals("available", plugin.getCapabilityStatus("convertImage"));
         assertEquals("available", plugin.getCapabilityStatus("convertAudio"));
-        assertEquals("reencodeVideo is currently only available on iOS.", plugin.getCapabilityReason("reencodeVideo"));
+        assertEquals("H.264 video re-encode with Media3 Transformer on Android.", plugin.getCapabilityReason("reencodeVideo"));
         assertEquals(
             "Still-image conversion is available on Android for webp, jpeg, and png outputs.",
             plugin.getCapabilityReason("convertImage")
@@ -63,8 +63,11 @@ public class CapacitorFFmpegPluginTest {
 
         assertEquals("android", payload.getString("platform"));
         assertEquals("available", features.getJSONObject("getCapabilities").getString("status"));
-        assertEquals("unimplemented", features.getJSONObject("reencodeVideo").getString("status"));
-        assertEquals("reencodeVideo is currently only available on iOS.", features.getJSONObject("reencodeVideo").getString("reason"));
+        assertEquals("experimental", features.getJSONObject("reencodeVideo").getString("status"));
+        assertEquals(
+            "H.264 video re-encode with Media3 Transformer on Android.",
+            features.getJSONObject("reencodeVideo").getString("reason")
+        );
         assertEquals("available", features.getJSONObject("convertAudio").getString("status"));
         assertEquals(
             "Audio conversion is available on Android for m4a, mp3, wav, ogg, aac, and flac outputs.",
@@ -100,5 +103,12 @@ public class CapacitorFFmpegPluginTest {
         assertEquals("/tmp/input.png", rawPath.getPath());
         assertEquals("/tmp/output.webp", fileUriPath.getPath());
         assertEquals("file:/%zz", malformedFileUriPath.getPath());
+    }
+
+    @Test
+    public void videoReencoderUsesDefaultBitrateWhenUnset() {
+        assertEquals(1_000_000, AndroidVideoReencoder.resolveBitrate(null));
+        assertEquals(1_000_000, AndroidVideoReencoder.resolveBitrate(0));
+        assertEquals(2_500_000, AndroidVideoReencoder.resolveBitrate(2_500_000));
     }
 }
