@@ -553,8 +553,8 @@ private final class SelfForReencodeVideo {
             throw FFmpegError.invalidArgument("Unsupported audio format: \(format)")
         }
 
-        guard outputURL.pathExtension.lowercased() == expectedExtension else {
-            throw FFmpegError.invalidArgument("Output path extension must be .\(expectedExtension).")
+        guard outputURL.pathExtension.lowercased() == normalizedFormat else {
+            throw FFmpegError.invalidArgument("Output path extension must be .\(normalizedFormat).")
         }
 
         let asset = AVURLAsset(url: inputURL)
