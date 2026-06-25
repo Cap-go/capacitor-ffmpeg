@@ -62,7 +62,7 @@ export class CapacitorFFmpegWeb extends WebPlugin implements CapacitorFFmpegPlug
 
   async reencodeVideo(options: ReencodeVideoOptions): Promise<FFmpegAcceptedJob> {
     void options;
-    throw this.unimplemented('reencodeVideo is currently only available on iOS.');
+    throw this.unimplemented('reencodeVideo is not available on web.');
   }
 
   async convertImage(options: ConvertImageOptions): Promise<ConvertImageResult> {
