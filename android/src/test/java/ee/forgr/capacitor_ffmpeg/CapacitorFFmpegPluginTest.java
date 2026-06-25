@@ -43,13 +43,16 @@ public class CapacitorFFmpegPluginTest {
         assertEquals("available", plugin.getCapabilityStatus("getCapabilities"));
         assertEquals("unimplemented", plugin.getCapabilityStatus("reencodeVideo"));
         assertEquals("available", plugin.getCapabilityStatus("convertImage"));
-        assertEquals("unimplemented", plugin.getCapabilityStatus("convertAudio"));
+        assertEquals("available", plugin.getCapabilityStatus("convertAudio"));
         assertEquals("reencodeVideo is currently only available on iOS.", plugin.getCapabilityReason("reencodeVideo"));
         assertEquals(
             "Still-image conversion is available on Android for webp, jpeg, and png outputs.",
             plugin.getCapabilityReason("convertImage")
         );
-        assertEquals("convertAudio is currently only available on iOS.", plugin.getCapabilityReason("convertAudio"));
+        assertEquals(
+            "Audio conversion is available on Android for m4a, mp3, wav, ogg, aac, and flac outputs.",
+            plugin.getCapabilityReason("convertAudio")
+        );
     }
 
     @Test
@@ -62,8 +65,11 @@ public class CapacitorFFmpegPluginTest {
         assertEquals("available", features.getJSONObject("getCapabilities").getString("status"));
         assertEquals("unimplemented", features.getJSONObject("reencodeVideo").getString("status"));
         assertEquals("reencodeVideo is currently only available on iOS.", features.getJSONObject("reencodeVideo").getString("reason"));
-        assertEquals("unimplemented", features.getJSONObject("convertAudio").getString("status"));
-        assertEquals("convertAudio is currently only available on iOS.", features.getJSONObject("convertAudio").getString("reason"));
+        assertEquals("available", features.getJSONObject("convertAudio").getString("status"));
+        assertEquals(
+            "Audio conversion is available on Android for m4a, mp3, wav, ogg, aac, and flac outputs.",
+            features.getJSONObject("convertAudio").getString("reason")
+        );
     }
 
     @Test
@@ -74,6 +80,14 @@ public class CapacitorFFmpegPluginTest {
         assertEquals("webp", plugin.normalizeImageFormat("webp"));
         assertEquals(85, plugin.resolveImageQuality(null));
         assertEquals(25, plugin.resolveImageQuality(0.25));
+    }
+
+    @Test
+    public void audioConversionHelpersNormalizeSupportedFormats() {
+        final AndroidAudioConverter converter = new AndroidAudioConverter();
+
+        assertEquals("mp3", converter.normalizeAudioFormat("MP3"));
+        assertEquals("flac", converter.normalizeAudioFormat("flac"));
     }
 
     @Test

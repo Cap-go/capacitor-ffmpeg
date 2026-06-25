@@ -174,7 +174,7 @@ struct FFmpegCapabilitiesPayload {
                 ),
                 "convertAudio": FFmpegCapabilityPayload(
                     status: "available",
-                    reason: "Audio conversion is available on iOS for m4a output."
+                    reason: "Audio conversion is available on iOS for m4a and wav outputs."
                 ),
                 "progressEvents": FFmpegCapabilityPayload(
                     status: nativeCoreAvailable ? "available" : "unavailable",
@@ -534,11 +534,27 @@ private final class SelfForReencodeVideo {
             throw FFmpegError.invalidArgument("In-place conversion is not allowed. Choose a different output path.")
         }
 
-        guard normalizedFormat == "m4a" else {
+        let exportPreset: String
+        let exportFileType: AVFileType
+        let temporaryExtension: String
+
+        switch normalizedFormat {
+        case "m4a":
+            exportPreset = AVAssetExportPresetAppleM4A
+            exportFileType = .m4a
+            temporaryExtension = "m4a"
+        case "wav":
+            exportPreset = AVAssetExportPresetPassthrough
+            exportFileType = .wav
+            temporaryExtension = "wav"
+        case "mp3", "ogg", "flac", "aac":
+            throw FFmpegError.invalidArgument("Audio format \(format) is not yet supported on iOS.")
+        default:
             throw FFmpegError.invalidArgument("Unsupported audio format: \(format)")
         }
-        guard outputURL.pathExtension.lowercased() == normalizedFormat else {
-            throw FFmpegError.invalidArgument("Output path extension must be .\(normalizedFormat).")
+
+        guard outputURL.pathExtension.lowercased() == expectedExtension else {
+            throw FFmpegError.invalidArgument("Output path extension must be .\(expectedExtension).")
         }
 
         let asset = AVURLAsset(url: inputURL)
@@ -554,14 +570,14 @@ private final class SelfForReencodeVideo {
         )
         let temporaryOutputURL = outputDirectory
             .appendingPathComponent(".ffmpeg-audio-\(UUID().uuidString)")
-            .appendingPathExtension(outputURL.pathExtension.isEmpty ? "m4a" : outputURL.pathExtension)
+            .appendingPathExtension(outputURL.pathExtension.isEmpty ? temporaryExtension : outputURL.pathExtension)
 
-        guard let exportSession = audioExportSessionFactory(asset, AVAssetExportPresetAppleM4A) else {
+        guard let exportSession = audioExportSessionFactory(asset, exportPreset) else {
             throw FFmpegError.transcodeFailed("Could not create the audio export session.")
         }
 
         exportSession.outputURL = temporaryOutputURL
-        exportSession.outputFileType = .m4a
+        exportSession.outputFileType = exportFileType
 
         exportSession.exportAsynchronously {
             defer {

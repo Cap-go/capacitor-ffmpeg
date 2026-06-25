@@ -81,14 +81,14 @@ bunx cap sync
 
 <docgen-index>
 
-* [`getCapabilities()`](#getcapabilities)
-* [`reencodeVideo(...)`](#reencodevideo)
-* [`convertImage(...)`](#convertimage)
-* [`convertAudio(...)`](#convertaudio)
-* [`addListener('progress', ...)`](#addlistenerprogress-)
-* [`getPluginVersion()`](#getpluginversion)
-* [Interfaces](#interfaces)
-* [Type Aliases](#type-aliases)
+- [`getCapabilities()`](#getcapabilities)
+- [`reencodeVideo(...)`](#reencodevideo)
+- [`convertImage(...)`](#convertimage)
+- [`convertAudio(...)`](#convertaudio)
+- [`addListener('progress', ...)`](#addlistenerprogress-)
+- [`getPluginVersion()`](#getpluginversion)
+- [Interfaces](#interfaces)
+- [Type Aliases](#type-aliases)
 
 </docgen-index>
 
@@ -105,8 +105,7 @@ Return the machine-readable capability matrix for the current platform.
 
 **Returns:** <code>Promise&lt;<a href="#ffmpegcapabilitiesresult">FFmpegCapabilitiesResult</a>&gt;</code>
 
---------------------
-
+---
 
 ### reencodeVideo(...)
 
@@ -127,8 +126,7 @@ Android and web currently reject with `UNIMPLEMENTED`.
 
 **Returns:** <code>Promise&lt;<a href="#ffmpegacceptedjob">FFmpegAcceptedJob</a>&gt;</code>
 
---------------------
-
+---
 
 ### convertImage(...)
 
@@ -148,8 +146,7 @@ Web currently rejects with `UNIMPLEMENTED`.
 
 **Returns:** <code>Promise&lt;<a href="#convertimageresult">ConvertImageResult</a>&gt;</code>
 
---------------------
-
+---
 
 ### convertAudio(...)
 
@@ -159,8 +156,9 @@ convertAudio(options: ConvertAudioOptions) => Promise<ConvertAudioResult>
 
 Convert audio into another container or codec.
 
-iOS currently supports `m4a`.
-Android and web currently reject with `UNIMPLEMENTED`.
+iOS currently supports `m4a` and `wav`.
+Android supports `m4a`, `mp3`, `wav`, `ogg`, `aac`, and `flac`.
+Web currently rejects with `UNIMPLEMENTED`.
 
 | Param         | Type                                                                |
 | ------------- | ------------------------------------------------------------------- |
@@ -168,8 +166,7 @@ Android and web currently reject with `UNIMPLEMENTED`.
 
 **Returns:** <code>Promise&lt;<a href="#convertaudioresult">ConvertAudioResult</a>&gt;</code>
 
---------------------
-
+---
 
 ### addListener('progress', ...)
 
@@ -186,8 +183,7 @@ Listen for media job progress.
 
 **Returns:** <code>Promise&lt;<a href="#pluginlistenerhandle">PluginListenerHandle</a>&gt;</code>
 
---------------------
-
+---
 
 ### getPluginVersion()
 
@@ -199,11 +195,9 @@ Get the plugin package version reported by the current platform implementation.
 
 **Returns:** <code>Promise&lt;<a href="#pluginversionresult">PluginVersionResult</a>&gt;</code>
 
---------------------
-
+---
 
 ### Interfaces
-
 
 #### FFmpegCapabilitiesResult
 
@@ -211,7 +205,6 @@ Get the plugin package version reported by the current platform implementation.
 | -------------- | --------------------------------------------------------------------------------- |
 | **`platform`** | <code>string</code>                                                               |
 | **`features`** | <code><a href="#ffmpegcapabilitiesfeatures">FFmpegCapabilitiesFeatures</a></code> |
-
 
 #### FFmpegCapabilitiesFeatures
 
@@ -229,7 +222,6 @@ Get the plugin package version reported by the current platform implementation.
 | **`remux`**             | <code><a href="#ffmpegcapability">FFmpegCapability</a></code> |
 | **`trim`**              | <code><a href="#ffmpegcapability">FFmpegCapability</a></code> |
 
-
 #### FFmpegCapability
 
 | Prop         | Type                                                                      |
@@ -237,14 +229,12 @@ Get the plugin package version reported by the current platform implementation.
 | **`status`** | <code><a href="#ffmpegcapabilitystatus">FFmpegCapabilityStatus</a></code> |
 | **`reason`** | <code>string</code>                                                       |
 
-
 #### FFmpegAcceptedJob
 
 | Prop         | Type                  |
 | ------------ | --------------------- |
 | **`jobId`**  | <code>string</code>   |
 | **`status`** | <code>'queued'</code> |
-
 
 #### ReencodeVideoOptions
 
@@ -256,14 +246,12 @@ Get the plugin package version reported by the current platform implementation.
 | **`height`**     | <code>number</code> |
 | **`bitrate`**    | <code>number</code> |
 
-
 #### ConvertImageResult
 
 | Prop             | Type                                                            |
 | ---------------- | --------------------------------------------------------------- |
 | **`outputPath`** | <code>string</code>                                             |
 | **`format`**     | <code><a href="#imageoutputformat">ImageOutputFormat</a></code> |
-
 
 #### ConvertImageOptions
 
@@ -274,7 +262,6 @@ Get the plugin package version reported by the current platform implementation.
 | **`format`**     | <code><a href="#imageoutputformat">ImageOutputFormat</a></code> |                                                                                                           |
 | **`quality`**    | <code>number</code>                                             | Compression quality in the inclusive range `0.0..1.0`. Native platforms reject values outside that range. |
 
-
 #### ConvertAudioResult
 
 | Prop             | Type                                                            |
@@ -282,22 +269,20 @@ Get the plugin package version reported by the current platform implementation.
 | **`outputPath`** | <code>string</code>                                             |
 | **`format`**     | <code><a href="#audiooutputformat">AudioOutputFormat</a></code> |
 
-
 #### ConvertAudioOptions
 
-| Prop             | Type                                                            |
-| ---------------- | --------------------------------------------------------------- |
-| **`inputPath`**  | <code>string</code>                                             |
-| **`outputPath`** | <code>string</code>                                             |
-| **`format`**     | <code><a href="#audiooutputformat">AudioOutputFormat</a></code> |
-
+| Prop             | Type                                                            | Description                                                                                     |
+| ---------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| **`inputPath`**  | <code>string</code>                                             |                                                                                                 |
+| **`outputPath`** | <code>string</code>                                             |                                                                                                 |
+| **`format`**     | <code><a href="#audiooutputformat">AudioOutputFormat</a></code> |                                                                                                 |
+| **`bitrate`**    | <code>number</code>                                             | Target audio bitrate in bits per second. Ignored for lossless outputs such as `wav` and `flac`. |
 
 #### PluginListenerHandle
 
 | Prop         | Type                                      |
 | ------------ | ----------------------------------------- |
 | **`remove`** | <code>() =&gt; Promise&lt;void&gt;</code> |
-
 
 #### FFmpegProgressEvent
 
@@ -310,31 +295,25 @@ Get the plugin package version reported by the current platform implementation.
 | **`outputPath`** | <code>string</code>                                                 |                                                                                  |
 | **`fileId`**     | <code>string</code>                                                 | Legacy alias kept for compatibility while callers migrate to `jobId`.            |
 
-
 #### PluginVersionResult
 
 | Prop          | Type                |
 | ------------- | ------------------- |
 | **`version`** | <code>string</code> |
 
-
 ### Type Aliases
-
 
 #### FFmpegCapabilityStatus
 
 <code>'available' | 'experimental' | 'unimplemented' | 'unavailable'</code>
 
-
 #### ImageOutputFormat
 
 <code>'webp' | 'jpeg' | 'png'</code>
 
-
 #### AudioOutputFormat
 
-<code>'m4a'</code>
-
+<code>'m4a' | 'mp3' | 'wav' | 'ogg' | 'aac' | 'flac'</code>
 
 #### FFmpegProgressState
 

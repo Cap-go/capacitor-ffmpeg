@@ -234,7 +234,7 @@ final class CapacitorFFmpegPluginTests: XCTestCase {
         defer { try? fileManager.removeItem(at: baseURL) }
 
         let inputURL = baseURL.appendingPathComponent("input.wav")
-        let outputURL = baseURL.appendingPathComponent("output.wav")
+        let outputURL = baseURL.appendingPathComponent("output.mp3")
 
         try writeToneWav(to: inputURL)
 
@@ -242,11 +242,11 @@ final class CapacitorFFmpegPluginTests: XCTestCase {
             try CapacitorFFmpeg().convertAudio(
                 inputPath: inputURL.path,
                 outputPath: outputURL.path,
-                format: "wav"
+                format: "mp3"
             ) { _ in }
         ) { error in
             XCTAssertEqual((error as? FFmpegError)?.code, "INVALID_ARGUMENT")
-            XCTAssertEqual(error.localizedDescription, "Unsupported audio format: wav")
+            XCTAssertEqual(error.localizedDescription, "Audio format mp3 is not yet supported on iOS.")
         }
     }
 
