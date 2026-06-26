@@ -174,7 +174,7 @@ struct FFmpegCapabilitiesPayload {
                 ),
                 "convertAudio": FFmpegCapabilityPayload(
                     status: "available",
-                    reason: "Audio conversion is available on iOS for m4a output."
+                    reason: "Audio conversion is available on iOS for m4a and wav outputs."
                 ),
                 "progressEvents": FFmpegCapabilityPayload(
                     status: nativeCoreAvailable ? "available" : "unavailable",
@@ -534,9 +534,28 @@ private final class SelfForReencodeVideo {
             throw FFmpegError.invalidArgument("In-place conversion is not allowed. Choose a different output path.")
         }
 
-        guard normalizedFormat == "m4a" else {
+        let exportPreset: String
+        let exportFileType: AVFileType
+        let temporaryExtension: String
+
+        switch normalizedFormat {
+        case "m4a":
+            exportPreset = AVAssetExportPresetAppleM4A
+            exportFileType = .m4a
+            temporaryExtension = "m4a"
+        case "wav":
+            try transcodeAudioToWav(
+                asset: AVURLAsset(url: inputURL),
+                outputURL: outputURL,
+                completion: completion
+            )
+            return
+        case "mp3", "ogg", "flac", "aac":
+            throw FFmpegError.invalidArgument("Audio format \(format) is not yet supported on iOS.")
+        default:
             throw FFmpegError.invalidArgument("Unsupported audio format: \(format)")
         }
+
         guard outputURL.pathExtension.lowercased() == normalizedFormat else {
             throw FFmpegError.invalidArgument("Output path extension must be .\(normalizedFormat).")
         }
@@ -554,14 +573,14 @@ private final class SelfForReencodeVideo {
         )
         let temporaryOutputURL = outputDirectory
             .appendingPathComponent(".ffmpeg-audio-\(UUID().uuidString)")
-            .appendingPathExtension(outputURL.pathExtension.isEmpty ? "m4a" : outputURL.pathExtension)
+            .appendingPathExtension(outputURL.pathExtension.isEmpty ? temporaryExtension : outputURL.pathExtension)
 
-        guard let exportSession = audioExportSessionFactory(asset, AVAssetExportPresetAppleM4A) else {
+        guard let exportSession = audioExportSessionFactory(asset, exportPreset) else {
             throw FFmpegError.transcodeFailed("Could not create the audio export session.")
         }
 
         exportSession.outputURL = temporaryOutputURL
-        exportSession.outputFileType = .m4a
+        exportSession.outputFileType = exportFileType
 
         exportSession.exportAsynchronously {
             defer {
@@ -588,6 +607,133 @@ private final class SelfForReencodeVideo {
             } catch {
                 completion(.failure(error))
             }
+        }
+    }
+
+    private func transcodeAudioToWav(
+        asset: AVAsset,
+        outputURL: URL,
+        completion: @escaping AudioConversionCompletion
+    ) throws {
+        guard outputURL.pathExtension.lowercased() == "wav" else {
+            throw FFmpegError.invalidArgument("Output path extension must be .wav.")
+        }
+
+        guard !asset.tracks(withMediaType: .audio).isEmpty else {
+            throw FFmpegError.invalidArgument("The input media does not contain an audio track.")
+        }
+
+        let fileManager = FileManager.default
+        let outputDirectory = outputURL.deletingLastPathComponent()
+        try fileManager.createDirectory(
+            at: outputDirectory,
+            withIntermediateDirectories: true
+        )
+        let temporaryOutputURL = outputDirectory
+            .appendingPathComponent(".ffmpeg-audio-\(UUID().uuidString)")
+            .appendingPathExtension("wav")
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            defer {
+                try? fileManager.removeItem(at: temporaryOutputURL)
+            }
+
+            do {
+                try self.writePcmWav(from: asset, to: temporaryOutputURL)
+
+                if fileManager.fileExists(atPath: outputURL.path) {
+                    _ = try fileManager.replaceItemAt(outputURL, withItemAt: temporaryOutputURL)
+                } else {
+                    try fileManager.moveItem(at: temporaryOutputURL, to: outputURL)
+                }
+
+                completion(.success(FFmpegConvertedAudio(
+                    outputPath: outputURL.absoluteString,
+                    format: "wav"
+                )))
+            } catch {
+                completion(.failure(error))
+            }
+        }
+    }
+
+    private func writePcmWav(from asset: AVAsset, to outputURL: URL) throws {
+        guard let audioTrack = asset.tracks(withMediaType: .audio).first else {
+            throw FFmpegError.invalidArgument("The input media does not contain an audio track.")
+        }
+
+        let pcmOutputSettings: [String: Any] = [
+            AVFormatIDKey: kAudioFormatLinearPCM,
+            AVLinearPCMBitDepthKey: 16,
+            AVLinearPCMIsBigEndianKey: false,
+            AVLinearPCMIsFloatKey: false,
+            AVLinearPCMIsNonInterleaved: false
+        ]
+
+        let reader = try AVAssetReader(asset: asset)
+        let readerOutput = AVAssetReaderTrackOutput(track: audioTrack, outputSettings: pcmOutputSettings)
+        readerOutput.alwaysCopiesSampleData = false
+        reader.add(readerOutput)
+
+        let writer = try AVAssetWriter(outputURL: outputURL, fileType: .wav)
+        let writerInput = AVAssetWriterInput(mediaType: .audio, outputSettings: pcmOutputSettings)
+        writerInput.expectsMediaDataInRealTime = false
+        writer.add(writerInput)
+
+        guard reader.startReading() else {
+            throw FFmpegError.transcodeFailed(
+                reader.error?.localizedDescription ?? "Could not read the input audio."
+            )
+        }
+
+        guard writer.startWriting() else {
+            throw FFmpegError.transcodeFailed(
+                writer.error?.localizedDescription ?? "Could not create the output audio."
+            )
+        }
+
+        writer.startSession(atSourceTime: .zero)
+
+        let transcodeQueue = DispatchQueue(label: "capgo.ffmpeg.wav-transcode")
+        let transcodeGroup = DispatchGroup()
+        transcodeGroup.enter()
+
+        writerInput.requestMediaDataWhenReady(on: transcodeQueue) {
+            while writerInput.isReadyForMoreMediaData {
+                if let sampleBuffer = readerOutput.copyNextSampleBuffer() {
+                    if !writerInput.append(sampleBuffer) {
+                        reader.cancelReading()
+                        writer.cancelWriting()
+                        transcodeGroup.leave()
+                        return
+                    }
+                } else {
+                    writerInput.markAsFinished()
+                    transcodeGroup.leave()
+                    return
+                }
+            }
+        }
+
+        transcodeGroup.wait()
+
+        let finishGroup = DispatchGroup()
+        finishGroup.enter()
+        var finishError: Error?
+
+        writer.finishWriting {
+            finishError = writer.error
+            finishGroup.leave()
+        }
+
+        finishGroup.wait()
+
+        if let finishError {
+            throw finishError
+        }
+
+        guard writer.status == .completed else {
+            throw FFmpegError.transcodeFailed("Could not export the output audio.")
         }
     }
 

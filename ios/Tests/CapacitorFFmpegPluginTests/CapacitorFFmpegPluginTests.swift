@@ -234,7 +234,7 @@ final class CapacitorFFmpegPluginTests: XCTestCase {
         defer { try? fileManager.removeItem(at: baseURL) }
 
         let inputURL = baseURL.appendingPathComponent("input.wav")
-        let outputURL = baseURL.appendingPathComponent("output.wav")
+        let outputURL = baseURL.appendingPathComponent("output.mp3")
 
         try writeToneWav(to: inputURL)
 
@@ -242,11 +242,11 @@ final class CapacitorFFmpegPluginTests: XCTestCase {
             try CapacitorFFmpeg().convertAudio(
                 inputPath: inputURL.path,
                 outputPath: outputURL.path,
-                format: "wav"
+                format: "mp3"
             ) { _ in }
         ) { error in
             XCTAssertEqual((error as? FFmpegError)?.code, "INVALID_ARGUMENT")
-            XCTAssertEqual(error.localizedDescription, "Unsupported audio format: wav")
+            XCTAssertEqual(error.localizedDescription, "Audio format mp3 is not yet supported on iOS.")
         }
     }
 
@@ -385,5 +385,36 @@ final class CapacitorFFmpegPluginTests: XCTestCase {
         }
 
         XCTAssertFalse(fileManager.fileExists(atPath: outputURL.path))
+    }
+
+    func testConvertAudioWritesWavOutputFromPcmTranscode() throws {
+        let fileManager = FileManager.default
+        let baseURL = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fileManager.createDirectory(at: baseURL, withIntermediateDirectories: true)
+        defer { try? fileManager.removeItem(at: baseURL) }
+
+        let inputURL = baseURL.appendingPathComponent("input.wav")
+        let outputURL = baseURL.appendingPathComponent("output.wav")
+        try writeToneWav(to: inputURL)
+        try Data("stale".utf8).write(to: outputURL)
+
+        let result = try waitForAudioConversion(
+            using: CapacitorFFmpeg(),
+            inputPath: inputURL.path,
+            outputPath: outputURL.path,
+            format: "wav",
+            timeout: 5.0
+        )
+
+        switch result {
+        case .success(let convertedAudio):
+            XCTAssertEqual(convertedAudio.format, "wav")
+            XCTAssertEqual(convertedAudio.outputPath, outputURL.absoluteString)
+        case .failure(let error):
+            XCTFail("Expected successful wav conversion, got \(error)")
+        }
+
+        XCTAssertTrue(fileManager.fileExists(atPath: outputURL.path))
+        XCTAssertGreaterThan(try fileManager.attributesOfItem(atPath: outputURL.path)[.size] as? UInt64 ?? 0, 44)
     }
 }

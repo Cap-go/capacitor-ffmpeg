@@ -11,7 +11,7 @@ export type FFmpegCapabilityStatus = 'available' | 'experimental' | 'unimplement
 export type FFmpegJobState = 'queued' | 'running' | 'completed' | 'failed';
 export type FFmpegProgressState = 'running' | 'completed' | 'failed';
 export type ImageOutputFormat = 'webp' | 'jpeg' | 'png';
-export type AudioOutputFormat = 'm4a';
+export type AudioOutputFormat = 'm4a' | 'mp3' | 'wav' | 'ogg' | 'aac' | 'flac';
 
 export interface FFmpegCapability {
   status: FFmpegCapabilityStatus;
@@ -71,6 +71,12 @@ export interface ConvertAudioOptions {
   inputPath: string;
   outputPath: string;
   format: AudioOutputFormat;
+  /**
+   * Target audio bitrate in bits per second.
+   *
+   * Ignored for lossless outputs such as `wav` and `flac`.
+   */
+  bitrate?: number;
 }
 
 export interface ConvertAudioResult {
@@ -126,8 +132,8 @@ export interface CapacitorFFmpegPlugin extends Plugin {
   /**
    * Convert audio into another container or codec.
    *
-   * iOS currently supports `m4a`.
-   * Android accepts a queued job and reports lifecycle via `progress`.
+   * iOS currently supports `m4a` and `wav`.
+   * Android supports `m4a`, `mp3`, `wav`, `ogg`, `aac`, and `flac`.
    * Web currently rejects with `UNIMPLEMENTED`.
    */
   convertAudio?(options: ConvertAudioOptions): Promise<ConvertAudioResult>;

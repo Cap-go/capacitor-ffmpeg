@@ -22,6 +22,8 @@ import java.util.concurrent.Executors;
 @CapacitorPlugin(name = "CapacitorFFmpeg")
 public class CapacitorFFmpegPlugin extends Plugin {
 
+    private final AndroidAudioConverter audioConverter = new AndroidAudioConverter();
+
     @PluginMethod
     public void getCapabilities(final PluginCall call) {
         try {
@@ -195,7 +197,43 @@ public class CapacitorFFmpegPlugin extends Plugin {
 
     @PluginMethod
     public void convertAudio(final PluginCall call) {
-        call.unimplemented(getUnsupportedOperationMessage("convertAudio"));
+        final String inputPath = call.getString("inputPath");
+        final String outputPath = call.getString("outputPath");
+        final String format = call.getString("format");
+        final Integer bitrate = call.getInt("bitrate");
+
+        if (bitrate != null && bitrate < 0) {
+            call.reject("Bitrate must be greater than or equal to 0", "INVALID_ARGUMENT");
+            return;
+        }
+
+        try {
+            final File inputFile = resolveFilesystemPath(inputPath);
+            final File outputFile = resolveFilesystemPath(outputPath);
+
+            if (!inputFile.isFile()) {
+                call.reject("Input audio not found: " + inputFile.getAbsolutePath(), "INVALID_ARGUMENT");
+                return;
+            }
+
+            if (inputFile.getCanonicalFile().equals(outputFile.getCanonicalFile())) {
+                call.reject("In-place conversion is not allowed. Choose a different output path.", "INVALID_ARGUMENT");
+                return;
+            }
+
+            final AndroidAudioConverter.ConvertedAudio convertedAudio = audioConverter.convert(inputFile, outputFile, format, bitrate);
+
+            final JSObject ret = new JSObject();
+            ret.put("outputPath", Uri.fromFile(new File(convertedAudio.getOutputPath())).toString());
+            ret.put("format", convertedAudio.getFormat());
+            call.resolve(ret);
+        } catch (final IllegalArgumentException exception) {
+            call.reject(exception.getMessage(), "INVALID_ARGUMENT", exception);
+        } catch (final IllegalStateException exception) {
+            call.reject(exception.getMessage(), "TRANSCODE_FAILED", exception);
+        } catch (final IOException exception) {
+            call.reject("Could not convert audio", "TRANSCODE_FAILED", exception);
+        }
     }
 
     @PluginMethod
@@ -259,7 +297,7 @@ public class CapacitorFFmpegPlugin extends Plugin {
             case "getPluginVersion", "getCapabilities" -> "available";
             case "reencodeVideo" -> "experimental";
             case "convertImage" -> "available";
-            case "convertAudio" -> "unimplemented";
+            case "convertAudio" -> "available";
             case "progressEvents" -> "available";
             case "probeMedia", "generateThumbnail", "extractAudio", "remux", "trim" -> "unimplemented";
             default -> "unimplemented";
@@ -270,7 +308,7 @@ public class CapacitorFFmpegPlugin extends Plugin {
         return switch (feature) {
             case "reencodeVideo" -> "H.264 video re-encode with Media3 Transformer on Android.";
             case "convertImage" -> "Still-image conversion is available on Android for webp, jpeg, and png outputs.";
-            case "convertAudio" -> getUnsupportedOperationMessage("convertAudio");
+            case "convertAudio" -> "Audio conversion is available on Android for m4a, mp3, wav, ogg, aac, and flac outputs.";
             case "progressEvents" -> "Progress events are emitted for accepted reencode jobs.";
             case "probeMedia" -> "probeMedia is not implemented on Android.";
             case "generateThumbnail" -> "generateThumbnail is not implemented on Android.";
