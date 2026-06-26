@@ -4,6 +4,8 @@ import com.arthenica.ffmpegkit.FFmpegKit;
 import com.arthenica.ffmpegkit.FFmpegSession;
 import com.arthenica.ffmpegkit.ReturnCode;
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -38,20 +40,27 @@ final class AndroidAudioConverter {
             throw new IllegalArgumentException("Output path extension must be ." + normalizedFormat + ".");
         }
 
-        final StringBuilder command = new StringBuilder();
-        command.append("-y -i \"").append(inputFile.getAbsolutePath()).append("\" -vn -c:a ").append(codec);
+        final List<String> arguments = new ArrayList<>();
+        arguments.add("-y");
+        arguments.add("-i");
+        arguments.add(inputFile.getAbsolutePath());
+        arguments.add("-vn");
+        arguments.add("-c:a");
+        arguments.add(codec);
 
         if (bitrate != null && bitrate > 0 && !"wav".equals(normalizedFormat) && !"flac".equals(normalizedFormat)) {
-            command.append(" -b:a ").append(bitrate);
+            arguments.add("-b:a");
+            arguments.add(String.valueOf(bitrate));
         }
 
         if ("m4a".equals(normalizedFormat)) {
-            command.append(" -movflags +faststart");
+            arguments.add("-movflags");
+            arguments.add("+faststart");
         }
 
-        command.append(" \"").append(outputFile.getAbsolutePath()).append("\"");
+        arguments.add(outputFile.getAbsolutePath());
 
-        final FFmpegSession session = FFmpegKit.execute(command.toString());
+        final FFmpegSession session = FFmpegKit.executeWithArguments(arguments.toArray(new String[0]));
         if (!ReturnCode.isSuccess(session.getReturnCode())) {
             final String logs = session.getAllLogsAsString();
             final String message = logs != null && !logs.isBlank() ? logs.trim() : "Could not convert the input audio.";

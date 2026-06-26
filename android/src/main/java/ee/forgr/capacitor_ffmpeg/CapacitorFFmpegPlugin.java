@@ -202,6 +202,11 @@ public class CapacitorFFmpegPlugin extends Plugin {
         final String format = call.getString("format");
         final Integer bitrate = call.getInt("bitrate");
 
+        if (bitrate != null && bitrate < 0) {
+            call.reject("Bitrate must be greater than or equal to 0", "INVALID_ARGUMENT");
+            return;
+        }
+
         try {
             final File inputFile = resolveFilesystemPath(inputPath);
             final File outputFile = resolveFilesystemPath(outputPath);
