@@ -4,7 +4,7 @@ import pkg from './package.json';
 
 const config: CapacitorConfig = {
   appId: 'app.capgo.ffmpeg',
-  appName: 'Ffmpeg Example',
+  appName: '@capgo/capacitor-ffmpeg',
   webDir: 'dist',
   plugins: {
     SplashScreen: {
