@@ -45,7 +45,9 @@ case "$platform" in
     fi
     bunx cap sync android
     cd android
-    ./gradlew build test
+    # Debug assemble + unit tests: validates the packed tarball without release APK
+    # packaging (FFmpeg native libs make :app:packageRelease flaky on CI disk limits).
+    ./gradlew assembleDebug test
     ;;
   ios)
     if [ ! -d ios ]; then

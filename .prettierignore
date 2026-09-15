@@ -4,3 +4,4 @@ example-app
 rust/target
 rust/ffmpeg-sys
 rust/x264-build-ios-sim-arm64
+README.md
