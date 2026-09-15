@@ -1,4 +1,5 @@
 example-app
+scripts/check-cap9-deprecated.mjs
 .build
 .swiftpm
 rust/target
