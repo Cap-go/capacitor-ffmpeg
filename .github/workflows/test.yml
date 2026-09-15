@@ -54,6 +54,8 @@ jobs:
       - name: Build
         id: build_code
         run: bun run verify:android
+      - name: Reclaim disk after plugin Android verify
+        run: rm -rf android/build android/.gradle
       - name: Verify packed package in example app (Android)
         shell: bash
         run: bash ./.github/scripts/verify-packed-example.sh android
