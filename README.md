@@ -1,22 +1,27 @@
 # @capgo/capacitor-ffmpeg
 
-<a href="https://capgo.app/">
-  <img
-    src="https://capgo.app/readme-banner.svg?repo=Cap-go/capacitor-ffmpeg"
-    alt="Capgo - Instant updates for Capacitor"
-  />
-</a>
+Re-encode videos and convert images on the device from your Capacitor app, with FFmpeg-based native code. Shrink uploads and normalize media formats without a server.
+
+<a href="https://capgo.app/?ref=plugin_ffmpeg"><img src="https://capgo.app/readme-banner.svg?repo=Cap-go/capacitor-ffmpeg" alt="Capgo - Instant updates for Capacitor" /></a>
 
 <div align="center">
-  <h2>
-    <a href="https://capgo.app/?ref=plugin_ffmpeg"> ➡️ Get Instant updates for your App with Capgo</a>
-  </h2>
-  <h2>
-    <a href="https://capgo.app/consulting/?ref=plugin_ffmpeg"> Missing a feature? We’ll build the plugin for you 💪</a>
-  </h2>
+  <p><b>Capgo</b>: open-source live updates for Ionic and Capacitor apps. Ship OTA fixes and features instantly, without waiting for app store review.</p>
+  <h2><a href="https://capgo.app/register/?ref=plugin_ffmpeg">➡️ Get started for free</a></h2>
+  <p>14-day unlimited free trial. No credit card required</p>
+  <p><a href="https://capgo.app/consulting/?ref=plugin_ffmpeg">Missing a feature? We'll build the plugin for you 💪</a></p>
 </div>
 
-This plugin exposes FFmpeg capabilities to Capacitor. The implementation is still early, and the supported feature set is intentionally smaller than upstream FFmpeg.
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Cap-go/capacitor-ffmpeg/main/assets/github-social-preview.png" alt="@capgo/capacitor-ffmpeg for Capacitor apps" width="300" />
+</p>
+
+## Key features
+
+- **Video re-encode**: `reencodeVideo()` queues a job and reports `progress` events.
+- **Image conversion**: `convertImage()` converts a still image to another format.
+- **Audio conversion**: `convertAudio()` where the platform supports it.
+- **Capability matrix**: `getCapabilities()` tells you which operations the current platform supports.
+- **Platforms**: iOS and Android. iOS uses AVFoundation with a native FFmpeg core, Android uses FFmpegKit and Media3. Not available on web. The feature set is intentionally smaller than upstream FFmpeg.
 
 ## Documentation
 
